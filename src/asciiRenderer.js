@@ -497,7 +497,7 @@ export class AsciiCanvasRenderer {
     this.resize();
   }
 
-  resize() {
+  resize(preferredRows = null) {
     const rect = this.canvas.getBoundingClientRect();
     const widthPx = Math.max(240, Math.floor(rect.width || this.canvas.clientWidth || 600));
     const heightPx = Math.max(200, Math.floor(rect.height || this.canvas.clientHeight || 400));
@@ -507,7 +507,9 @@ export class AsciiCanvasRenderer {
     this.canvas.height = Math.floor(heightPx * dpr);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    const targetRows = clamp(Math.round(heightPx / 4.4), 68, 94);
+    const targetRows = preferredRows
+      ? clamp(Math.round(preferredRows), 48, 110)
+      : clamp(Math.round(heightPx / 4.4), 68, 94);
     const cellH = heightPx / targetRows;
     const fontSize = clamp(Math.round(cellH * 0.94 * 10) / 10, 3.8, 8.2);
 
