@@ -2,23 +2,23 @@ import { PART_KINDS } from '../partsBuffer.js';
 
 const GIFT_SPECS = [
   {
-    cx: -0.52, cz: 0.42, w: 0.34, h: 0.25, d: 0.3, yaw: 0.35,
+    cx: -0.68, cz: 0.48, w: 0.34, h: 0.25, d: 0.3, yaw: 0.35,
     boxCol: [0.95, 0.16, 0.2], ribCol: [1.0, 0.86, 0.28], t0: 7.2,
   },
   {
-    cx: 0.54, cz: 0.36, w: 0.36, h: 0.28, d: 0.32, yaw: -0.42,
+    cx: 0.68, cz: 0.42, w: 0.36, h: 0.28, d: 0.32, yaw: -0.42,
     boxCol: [0.2, 0.48, 0.98], ribCol: [1.0, 0.86, 0.3], t0: 7.6,
   },
   {
-    cx: 0.08, cz: 0.68, w: 0.28, h: 0.21, d: 0.26, yaw: 0.18,
+    cx: 0.26, cz: 0.78, w: 0.28, h: 0.21, d: 0.26, yaw: 0.22,
     boxCol: [0.98, 0.72, 0.18], ribCol: [0.94, 0.16, 0.22], t0: 8.0,
   },
   {
-    cx: -0.4, cz: -0.54, w: 0.3, h: 0.23, d: 0.28, yaw: 0.68,
+    cx: -0.46, cz: -0.72, w: 0.3, h: 0.23, d: 0.28, yaw: 0.68,
     boxCol: [0.18, 0.76, 0.48], ribCol: [0.96, 0.98, 1.0], t0: 8.4,
   },
   {
-    cx: 0.44, cz: -0.5, w: 0.28, h: 0.22, d: 0.28, yaw: -0.25,
+    cx: 0.52, cz: -0.66, w: 0.28, h: 0.22, d: 0.28, yaw: -0.25,
     boxCol: [0.92, 0.2, 0.42], ribCol: [1.0, 0.88, 0.42], t0: 8.8,
   },
 ];
@@ -27,7 +27,7 @@ function addBoxPoint(buffer, spec, lx, ly, lz, lnx, lny, lnz, isRibbon) {
   const c = Math.cos(spec.yaw);
   const s = Math.sin(spec.yaw);
   const wx = spec.cx + lx * c - lz * s;
-  const wy = -0.04 + ly;
+  const wy = -0.01 + ly;
   const wz = spec.cz + lx * s + lz * c;
 
   const wnx = lnx * c - lnz * s;

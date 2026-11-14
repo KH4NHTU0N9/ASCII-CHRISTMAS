@@ -2,24 +2,24 @@ import { TAU, envelope, normalize3 } from '../math.js';
 import { PART_KINDS } from '../partsBuffer.js';
 
 /**
- * Generates 24 whorls of drooping pine branches with ambient occlusion
- * shading, upper-surface snow caps, and returns branch tip anchors.
+ * Generates 26 whorls of lush drooping pine branches with deep interior
+ * ambient occlusion and frosty upper-surface snow caps.
  */
-export function buildFoliage(buffer, rng, { y0 = 0.42, y1 = 2.55, tiers = 24 } = {}) {
+export function buildFoliage(buffer, rng, { y0 = 0.42, y1 = 2.55, tiers = 26 } = {}) {
   const tips = [];
   const span = y1 - y0;
 
   for (let i = 0; i < tiers; i++) {
     const fTier = i / (tiers - 1);
-    const y = y0 + 0.02 + (span - 0.06) * fTier;
+    const y = y0 + 0.02 + (span - 0.05) * fTier;
     const R = envelope(y, y0, y1);
     const ratio = (y - y0) / span;
-    const nb = Math.floor(7 + 11 * (1 - ratio));
+    const nb = Math.floor(8 + 12 * (1 - ratio));
 
     for (let b = 0; b < nb; b++) {
-      const a = (TAU * b) / nb + i * 0.618 * TAU + rng.normal(0, 0.18);
-      const L = R * rng.uniform(0.78, 1.12);
-      const n = Math.floor(70 + 230 * L);
+      const a = (TAU * b) / nb + i * 0.618 * TAU + rng.normal(0, 0.16);
+      const L = R * rng.uniform(0.8, 1.09);
+      const n = Math.floor(62 + 205 * L);
 
       const dx = Math.cos(a);
       const dz = Math.sin(a);
@@ -27,14 +27,14 @@ export function buildFoliage(buffer, rng, { y0 = 0.42, y1 = 2.55, tiers = 24 } =
       const sideZ = dx;
 
       for (let k = 0; k < n; k++) {
-        const s = Math.pow(rng.random(), 0.62);
-        const spread = (0.028 + 0.095 * s) * rng.normal(0, 1);
+        const s = Math.pow(rng.random(), 0.6);
+        const spread = (0.022 + 0.088 * s) * rng.normal(0, 1);
         const dist = s * L;
         const yy =
           y +
           0.075 * dist -
-          0.26 * dist * dist +
-          0.025 * rng.normal(0, 1);
+          0.18 * dist * dist +
+          0.022 * rng.normal(0, 1);
 
         const px = dx * dist + sideX * spread;
         const pz = dz * dist + sideZ * spread;
@@ -45,14 +45,15 @@ export function buildFoliage(buffer, rng, { y0 = 0.42, y1 = 2.55, tiers = 24 } =
           dz * 0.72 + rng.normal(0, 0.25)
         );
 
-        const ao = 0.3 + 0.7 * Math.pow(s, 1.25);
-        const tone = ao * rng.uniform(0.76, 1.15);
-        const cr = (0.04 + 0.14 * s) * tone;
-        const cg = (0.36 + 0.30 * s) * tone;
-        const cb = (0.10 + 0.12 * s) * tone;
+        // Deep inner AO shadow contrasting with bright outer tips for strong 3D relief
+        const ao = 0.18 + 0.82 * Math.pow(s, 1.5);
+        const tone = ao * rng.uniform(0.75, 1.15);
+        const cr = (0.03 + 0.15 * s) * tone;
+        const cg = (0.34 + 0.34 * s) * tone;
+        const cb = (0.09 + 0.12 * s) * tone;
 
-        const t0 = 0.75 + 4.4 * ratio + 0.38 * s;
-        const isSnow = s > 0.52 && rng.random() < 0.1 && ny > 0.34;
+        const t0 = 0.75 + 4.35 * ratio + 0.38 * s;
+        const isSnow = s > 0.56 && rng.random() < 0.09 && ny > 0.36;
 
         if (isSnow) {
           buffer.addPoint(
@@ -60,10 +61,10 @@ export function buildFoliage(buffer, rng, { y0 = 0.42, y1 = 2.55, tiers = 24 } =
             yy + 0.012,
             pz,
             nx,
-            Math.max(0.5, ny),
+            Math.max(0.55, ny),
             nz,
-            0.93 * (0.85 + 0.15 * ao),
-            0.96 * (0.85 + 0.15 * ao),
+            0.94 * (0.85 + 0.15 * ao),
+            0.97 * (0.85 + 0.15 * ao),
             1.0,
             PART_KINDS.SNOWCAP,
             t0,
@@ -89,8 +90,8 @@ export function buildFoliage(buffer, rng, { y0 = 0.42, y1 = 2.55, tiers = 24 } =
         }
       }
 
-      const tipDist = L * 0.93;
-      const tipY = y + 0.07 * tipDist - 0.22 * tipDist * tipDist;
+      const tipDist = L * 0.95;
+      const tipY = y + 0.075 * tipDist - 0.18 * tipDist * tipDist;
       tips.push({
         x: dx * tipDist,
         y: tipY,

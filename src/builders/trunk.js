@@ -5,11 +5,11 @@ import { PART_KINDS } from '../partsBuffer.js';
  * Generates the cylindrical wooden trunk with procedural bark striping.
  */
 export function buildTrunk(buffer) {
-  const heightSteps = 44;
-  const angleSteps = 32;
-  const radius = 0.085;
+  const heightSteps = 48;
+  const angleSteps = 36;
+  const radius = 0.105;
   const hMin = -0.05;
-  const hMax = 0.6;
+  const hMax = 0.58;
 
   for (let ih = 0; ih < heightSteps; ih++) {
     const f = ih / (heightSteps - 1);
