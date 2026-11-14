@@ -37,6 +37,13 @@ function getDomRefs() {
     mp3Input: document.getElementById('mp3-input'),
     btnReplay: document.getElementById('btn-replay'),
     btnToggleCode: document.getElementById('btn-toggle-code'),
+    btnPanel: document.getElementById('btn-panel'),
+    controlPanel: document.getElementById('control-panel'),
+    btnPanelClose: document.getElementById('btn-panel-close'),
+    btnZen: document.getElementById('btn-zen'),
+    zenExitBtn: document.getElementById('zen-exit-btn'),
+    btnAutoRotate: document.getElementById('btn-auto-rotate'),
+    btnResetCam: document.getElementById('btn-reset-cam'),
     codeScroller: document.getElementById('code-scroller'),
     dropOverlay: document.getElementById('drop-overlay'),
   };
@@ -83,9 +90,15 @@ async function bootstrap() {
   let currentFps = CONFIG.animation.targetFps;
 
   let lightModeIndex = 0;
+  let colorTheme = 'classic';
+  let glyphSet = 'ascii';
+  let autoRotate = true;
+  let autoSpinDeg = 0;
+  let lastTickElapsed = 0;
   let yawOffsetDeg = 0;
   let pitchOffset = 0;
   let zoom = 1;
+  const cursor = { active: false, u: 0.5, v: 0.5 };
 
   function cycleLightMode() {
     lightModeIndex = (lightModeIndex + 1) % LIGHT_MODES.length;
@@ -94,13 +107,19 @@ async function bootstrap() {
     dom.btnMode.classList.toggle('is-active', lightModeIndex !== 0);
   }
 
+  function resetCamera() {
+    yawOffsetDeg = 0;
+    pitchOffset = 0;
+    zoom = 1;
+  }
+
   function replay() {
     pausedAtElapsed = null;
     startTs = performance.now();
     lastFrameTs = 0;
-    yawOffsetDeg = 0;
-    pitchOffset = 0;
-    zoom = 1;
+    lastTickElapsed = 0;
+    autoSpinDeg = 0;
+    resetCamera();
     typer.reset();
   }
 
@@ -121,19 +140,65 @@ async function bootstrap() {
     requestAnimationFrame(() => renderer.resize());
   }
 
+  function toggleControlPanel(forceOpen) {
+    const shouldOpen =
+      typeof forceOpen === 'boolean' ? forceOpen : dom.controlPanel.hidden;
+    dom.controlPanel.hidden = !shouldOpen;
+    dom.btnPanel.classList.toggle('is-active', shouldOpen);
+  }
+
+  function setZenMode(forceZen) {
+    const active =
+      typeof forceZen === 'boolean'
+        ? forceZen
+        : !dom.shell.classList.contains('zen-mode');
+    dom.shell.classList.toggle('zen-mode', active);
+    dom.btnZen.classList.toggle('is-active', active);
+    if (active) {
+      toggleControlPanel(false);
+    }
+    requestAnimationFrame(() => renderer.resize());
+  }
+
   dom.btnMode.addEventListener('click', cycleLightMode);
   dom.btnMusic.addEventListener('click', () => audio.toggle());
   dom.greetingBadge.addEventListener('click', () => audio.toggle());
   dom.btnReplay.addEventListener('click', replay);
   dom.btnToggleCode.addEventListener('click', toggleCodePane);
+  dom.btnPanel.addEventListener('click', () => toggleControlPanel());
+  dom.btnPanelClose.addEventListener('click', () => toggleControlPanel(false));
+  dom.btnZen.addEventListener('click', () => setZenMode(true));
+  dom.zenExitBtn.addEventListener('click', () => setZenMode(false));
   dom.btnMp3.addEventListener('click', () => dom.mp3Input.click());
+
+  dom.btnAutoRotate.addEventListener('click', () => {
+    autoRotate = !autoRotate;
+    dom.btnAutoRotate.classList.toggle('is-active', autoRotate);
+  });
+  dom.btnResetCam.addEventListener('click', resetCamera);
+
+  const themeBtns = dom.controlPanel.querySelectorAll('[data-theme]');
+  themeBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      colorTheme = btn.dataset.theme;
+      themeBtns.forEach((b) => b.classList.toggle('is-active', b === btn));
+    });
+  });
+
+  const glyphBtns = dom.controlPanel.querySelectorAll('[data-glyph]');
+  glyphBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      glyphSet = btn.dataset.glyph;
+      glyphBtns.forEach((b) => b.classList.toggle('is-active', b === btn));
+    });
+  });
 
   dom.mp3Input.addEventListener('change', (e) => {
     const file = e.target.files?.[0];
     if (file) audio.loadLocalFile(file);
   });
 
-  // Pointer drag to orbit/tilt 3D tree; tap/click to launch firework sparks
+  // Pointer drag to orbit/tilt 3D tree; hover repels/brightens nearby ASCII; click sparks
   let dragState = null;
   dom.canvas.addEventListener('pointerdown', (e) => {
     dragState = {
@@ -142,19 +207,33 @@ async function bootstrap() {
       lastY: e.clientY,
       moved: 0,
     };
+    cursor.active = false;
     dom.canvas.setPointerCapture(e.pointerId);
   });
 
   dom.canvas.addEventListener('pointermove', (e) => {
-    if (!dragState || e.pointerId !== dragState.id) return;
-    const dx = e.clientX - dragState.lastX;
-    const dy = e.clientY - dragState.lastY;
-    dragState.lastX = e.clientX;
-    dragState.lastY = e.clientY;
-    dragState.moved += Math.hypot(dx, dy);
+    const rect = dom.canvas.getBoundingClientRect();
+    const u = clamp((e.clientX - rect.left) / Math.max(1, rect.width), 0, 1);
+    const v = clamp((e.clientY - rect.top) / Math.max(1, rect.height), 0, 1);
 
-    yawOffsetDeg += dx * 0.45;
-    pitchOffset = clamp(pitchOffset + dy * 0.004, -0.32, 0.48);
+    if (dragState && e.pointerId === dragState.id) {
+      const dx = e.clientX - dragState.lastX;
+      const dy = e.clientY - dragState.lastY;
+      dragState.lastX = e.clientX;
+      dragState.lastY = e.clientY;
+      dragState.moved += Math.hypot(dx, dy);
+
+      yawOffsetDeg += dx * 0.45;
+      pitchOffset = clamp(pitchOffset + dy * 0.0045, -0.45, 0.65);
+      cursor.active = false;
+      return;
+    }
+
+    if (e.pointerType !== 'touch') {
+      cursor.active = true;
+      cursor.u = u;
+      cursor.v = v;
+    }
   });
 
   const endDrag = (e) => {
@@ -170,11 +249,16 @@ async function bootstrap() {
   dom.canvas.addEventListener('pointerup', endDrag);
   dom.canvas.addEventListener('pointercancel', () => {
     dragState = null;
+    cursor.active = false;
   });
+  dom.canvas.addEventListener('pointerleave', () => {
+    if (!dragState) cursor.active = false;
+  });
+  dom.canvas.addEventListener('dblclick', resetCamera);
 
   dom.canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
-    zoom = clamp(zoom - e.deltaY * 0.001, 0.68, 1.55);
+    zoom = clamp(zoom - e.deltaY * 0.0012, 0.6, 2.8);
   }, { passive: false });
 
   // Drag-and-drop local audio file onto the viewport
@@ -197,16 +281,29 @@ async function bootstrap() {
     }
   });
 
-  // Keyboard shortcuts: M = music, L = light mode, R = replay, C = code pane, Space = pause
+  // Keyboard shortcuts: M = music, L = light, P = tune panel, H = Zen, R = replay, C = code, Space = pause
   window.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.target && ['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+
+    if (e.key === 'Escape') {
+      if (dom.shell.classList.contains('zen-mode')) {
+        setZenMode(false);
+      } else if (!dom.controlPanel.hidden) {
+        toggleControlPanel(false);
+      }
+      return;
+    }
 
     const key = e.key.toLowerCase();
     if (key === 'm') {
       audio.toggle();
     } else if (key === 'l') {
       cycleLightMode();
+    } else if (key === 'p') {
+      toggleControlPanel();
+    } else if (key === 'h') {
+      setZenMode();
     } else if (key === 'r') {
       replay();
     } else if (key === 'c') {
@@ -230,8 +327,12 @@ async function bootstrap() {
 
     const elapsedSec =
       pausedAtElapsed !== null ? pausedAtElapsed : (now - startTs) / 1000;
-    const rotationDeg =
-      elapsedSec * CONFIG.animation.rotationSpeedDegPerSec + yawOffsetDeg;
+    const dt = Math.max(0, elapsedSec - lastTickElapsed);
+    lastTickElapsed = elapsedSec;
+    if (pausedAtElapsed === null && autoRotate) {
+      autoSpinDeg += dt * CONFIG.animation.rotationSpeedDegPerSec;
+    }
+    const rotationDeg = autoSpinDeg + yawOffsetDeg;
 
     const lettersCount = renderer.render(scene, sky, elapsedSec, rotationDeg, {
       magicSpiral,
@@ -239,6 +340,9 @@ async function bootstrap() {
       lightMode: LIGHT_MODES[lightModeIndex].id,
       pitchOffset,
       zoom,
+      colorTheme,
+      glyphSet,
+      cursor,
     });
     typer.update(elapsedSec);
 
