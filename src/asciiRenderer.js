@@ -3,16 +3,15 @@ import { clamp } from './math.js';
 import { PART_KINDS } from './partsBuffer.js';
 import { computePointShade } from './treeEngine.js';
 import { renderSkyToGrid } from './skyParticles.js';
+import { renderMagicSpiral, renderShootingStars } from './magicEffects.js';
 
 const RAMP = CONFIG.render.ramp;
-
-// Quantized RGB string cache to avoid thousands of string allocations per frame
 const RGB_CACHE = new Map();
 
 function getQuantizedRgb(rLin, gLin, bLin) {
-  const rr = clamp(Math.round(rLin * 255), 0, 255) & 0xfc;
-  const gg = clamp(Math.round(gLin * 255), 0, 255) & 0xfc;
-  const bb = clamp(Math.round(bLin * 255), 0, 255) & 0xfc;
+  const rr = clamp(Math.round(clamp(rLin, 0, 1) * 255), 0, 255) & 0xfc;
+  const gg = clamp(Math.round(clamp(gLin, 0, 1) * 255), 0, 255) & 0xfc;
+  const bb = clamp(Math.round(clamp(bLin, 0, 1) * 255), 0, 255) & 0xfc;
   const key = (rr << 16) | (gg << 8) | bb;
   let str = RGB_CACHE.get(key);
   if (!str) {
@@ -20,6 +19,17 @@ function getQuantizedRgb(rLin, gLin, bLin) {
     RGB_CACHE.set(key, str);
   }
   return { str, rr, gg, bb };
+}
+
+function resolveLightTint(baseR, baseG, baseB, lightMode, elapsedSec, t0) {
+  if (lightMode === 'warm') {
+    return [1.0, 0.88, 0.48];
+  }
+  if (lightMode === 'aurora') {
+    const wave = 0.5 + 0.5 * Math.sin(elapsedSec * 2.2 + t0 * 1.4);
+    return [0.3 + 0.55 * wave, 0.92, 0.98 - 0.32 * wave];
+  }
+  return [baseR, baseG, baseB];
 }
 
 /**
@@ -51,15 +61,15 @@ function resetGrid(grid) {
 }
 
 function glyphFromLuminance(lum, kind) {
-  if (kind === PART_KINDS.LIGHT) return lum > 0.85 ? '@' : '*';
-  if (kind === PART_KINDS.STAR) return lum > 0.9 ? '@' : '#';
-  if (kind === PART_KINDS.GARLAND) return lum > 0.72 ? '*' : '+';
+  if (kind === PART_KINDS.LIGHT) return lum > 0.9 ? '@' : '*';
+  if (kind === PART_KINDS.STAR) return lum > 0.95 ? '@' : '#';
+  if (kind === PART_KINDS.GARLAND) return lum > 0.78 ? '*' : '+';
   if (kind === PART_KINDS.GROUND) {
     const groundRamp = ' .·:;-=+';
     const idx = clamp(Math.floor(lum * (groundRamp.length - 1)), 1, groundRamp.length - 1);
     return groundRamp[idx];
   }
-  const idx = clamp(Math.floor(lum * 1.15 * (RAMP.length - 1)), 1, RAMP.length - 1);
+  const idx = clamp(Math.floor(lum * 1.05 * (RAMP.length - 1)), 1, RAMP.length - 1);
   return RAMP[idx];
 }
 
@@ -78,6 +88,11 @@ export function projectSceneToGrid(
     cellW = 3.5,
     cellH = 5.5,
     sky = null,
+    magicSpiral = null,
+    bursts = null,
+    lightMode = 'twinkle',
+    pitchOffset = 0,
+    zoom = 1,
   } = {}
 ) {
   resetGrid(grid);
@@ -103,10 +118,11 @@ export function projectSceneToGrid(
   const yaw = (rotationDeg * Math.PI) / 180;
   const cy = Math.cos(yaw);
   const sy = Math.sin(yaw);
-  const cp = Math.cos(cameraPitchRad);
-  const sp = Math.sin(cameraPitchRad);
+  const pitch = clamp(cameraPitchRad + pitchOffset, -0.35, 0.72);
+  const cp = Math.cos(pitch);
+  const sp = Math.sin(pitch);
 
-  const scalePx = Math.min(heightPx, widthPx * 1.12) * 0.345;
+  const scalePx = Math.min(heightPx, widthPx * 1.12) * 0.345 * zoom;
   const centerX = widthPx * 0.5;
   const centerY = heightPx * 0.49;
 
@@ -123,7 +139,6 @@ export function projectSceneToGrid(
 
     const rx = wx * cy + wz * sy;
     const rz = -wx * sy + wz * cy;
-    // Downward camera pitch: back ground (+rz) rises toward horizon, front (-rz) slopes toward foreground
     const py = wy * cp + rz * sp;
     const pz = -wy * sp + rz * cp;
 
@@ -172,23 +187,33 @@ export function projectSceneToGrid(
       kind,
       elapsedSec,
       pointT0,
-      phase[i]
+      phase[i],
+      lightMode
     );
 
     depth[cellIdx] = zEffective;
     cellKinds[cellIdx] = kind;
 
-    const baseR = pColors[i3];
-    const baseG = pColors[i3 + 1];
-    const baseB = pColors[i3 + 2];
+    let baseR = pColors[i3];
+    let baseG = pColors[i3 + 1];
+    let baseB = pColors[i3 + 2];
+    if (kind === PART_KINDS.LIGHT) {
+      [baseR, baseG, baseB] = resolveLightTint(baseR, baseG, baseB, lightMode, elapsedSec, pointT0);
+    }
+
     const shadeFactor =
       kind === PART_KINDS.LIGHT || kind === PART_KINDS.STAR
-        ? Math.max(0.75, lum)
-        : 0.25 + 0.92 * lum;
+        ? Math.max(0.95, lum)
+        : 0.48 + 0.88 * lum;
 
-    const rLin = baseR * shadeFactor * (1 - birth * 0.72) + 0.96 * (birth * 0.72);
-    const gLin = baseG * shadeFactor * (1 - birth * 0.72) + 0.98 * (birth * 0.72);
-    const bLin = baseB * shadeFactor * (1 - birth * 0.72) + 1.0 * (birth * 0.72);
+    // Subtle perceptual gamma lift so thin micro-ASCII glyphs glow brightly on dark canvas
+    const rRaw = Math.pow(clamp(baseR * shadeFactor, 0, 1.3), 0.82);
+    const gRaw = Math.pow(clamp(baseG * shadeFactor, 0, 1.3), 0.82);
+    const bRaw = Math.pow(clamp(baseB * shadeFactor, 0, 1.3), 0.82);
+
+    const rLin = rRaw * (1 - birth * 0.72) + 0.98 * (birth * 0.72);
+    const gLin = gRaw * (1 - birth * 0.72) + 0.99 * (birth * 0.72);
+    const bLin = bRaw * (1 - birth * 0.72) + 1.0 * (birth * 0.72);
 
     const { str, rr, gg, bb } = getQuantizedRgb(rLin, gLin, bLin);
     chars[cellIdx] = birth > 0.35 ? '#' : glyphFromLuminance(lum, kind);
@@ -196,7 +221,7 @@ export function projectSceneToGrid(
     rgbPacked[cellIdx] = (rr << 16) | (gg << 8) | bb;
 
     if (kind === PART_KINDS.LIGHT || kind === PART_KINDS.STAR) {
-      const intensity = kind === PART_KINDS.STAR ? 0.92 : clamp(lum - 0.2, 0, 1);
+      const intensity = kind === PART_KINDS.STAR ? 1.0 : clamp(lum - 0.12, 0, 1);
       if (intensity > glow[cellIdx]) {
         glow[cellIdx] = intensity;
         glowColors[cellIdx] = str;
@@ -204,11 +229,31 @@ export function projectSceneToGrid(
     }
   }
 
-  // Radiate warm ASCII light bounce onto neighboring cells & empty halo sparks
+  // Ascending 3D golden/cyan magic spiral particles
+  if (magicSpiral) {
+    renderMagicSpiral(magicSpiral, grid, {
+      elapsedSec,
+      rotationDeg,
+      widthPx,
+      heightPx,
+      cellW,
+      cellH,
+      pitchOffset,
+      zoom,
+    });
+  }
+
+  // Warm colored light bounce onto neighboring cells & empty halo sparks
   applyAsciiLightBounce(grid);
 
   if (sky) {
     renderSkyToGrid(sky, grid, elapsedSec);
+  }
+
+  renderShootingStars(grid, elapsedSec);
+
+  if (bursts) {
+    bursts.render(grid);
   }
 
   let lettersCount = 0;
@@ -227,7 +272,7 @@ function applyAsciiLightBounce(grid) {
     for (let c = 2; c < cols - 2; c++) {
       const idx = rowOff + c;
       const g = glow[idx];
-      if (g < 0.48) continue;
+      if (g < 0.45) continue;
 
       const lightCol = glowColors[idx];
       const lp = rgbPacked[idx];
@@ -240,19 +285,18 @@ function applyAsciiLightBounce(grid) {
           if (dr === 0 && dc === 0) continue;
           const nIdx = (r + dr) * cols + (c + dc);
           if (chars[nIdx] === ' ' && depth[nIdx] >= 900) {
-            if (Math.abs(dr) + Math.abs(dc) === 1 && g > 0.62) {
+            if (Math.abs(dr) + Math.abs(dc) === 1 && g > 0.58) {
               chars[nIdx] = '·';
               colors[nIdx] = lightCol;
             }
             continue;
           }
-          // Softly illuminate adjacent needles/snow without overwriting lights
           if (glow[nIdx] > 0) continue;
           const p = rgbPacked[nIdx];
           const nr = (p >> 16) & 0xff;
           const ng = (p >> 8) & 0xff;
           const nb = p & 0xff;
-          const boost = 0.22 * g;
+          const boost = 0.28 * g;
           const { str } = getQuantizedRgb(
             (nr + lr * boost) / 255,
             (ng + lg * boost) / 255,
@@ -266,8 +310,8 @@ function applyAsciiLightBounce(grid) {
 }
 
 /**
- * Canvas 2D renderer wrapper that handles Retina DPI scaling, micro-ASCII grid
- * sizing, and smooth radial glow falloff (no hard circular edges).
+ * Canvas 2D renderer wrapper with Retina DPI scaling, micro-ASCII grid,
+ * luminous midnight atmosphere backdrop, and smooth radial glow falloff.
  */
 export class AsciiCanvasRenderer {
   constructor(canvas) {
@@ -294,7 +338,6 @@ export class AsciiCanvasRenderer {
     this.canvas.height = Math.floor(heightPx * dpr);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    // Ultra-dense micro-ASCII grid (~70-92 rows) for true 3D point-cloud detail
     const targetRows = clamp(Math.round(heightPx / 4.4), 68, 94);
     const cellH = heightPx / targetRows;
     const fontSize = clamp(Math.round(cellH * 0.94 * 10) / 10, 3.8, 8.2);
@@ -312,7 +355,7 @@ export class AsciiCanvasRenderer {
     }
   }
 
-  render(scene, sky, elapsedSec, rotationDeg) {
+  render(scene, sky, elapsedSec, rotationDeg, options = {}) {
     const { widthPx, heightPx, cellW, cellH, fontSize } = this.metrics;
     const lettersCount = projectSceneToGrid(scene, this.grid, {
       elapsedSec,
@@ -322,15 +365,29 @@ export class AsciiCanvasRenderer {
       cellW,
       cellH,
       sky,
+      ...options,
     });
 
     const ctx = this.ctx;
-    ctx.fillStyle = CONFIG.render.skyColor;
+
+    // Subtle deep midnight-blue ambient glow behind the tree instead of flat pure black
+    const bgGrad = ctx.createRadialGradient(
+      widthPx * 0.5,
+      heightPx * 0.54,
+      10,
+      widthPx * 0.5,
+      heightPx * 0.54,
+      Math.max(widthPx, heightPx) * 0.65
+    );
+    bgGrad.addColorStop(0, '#07131d');
+    bgGrad.addColorStop(0.55, '#030710');
+    bgGrad.addColorStop(1, '#020308');
+    ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, widthPx, heightPx);
 
     const { cols, rows, chars, colors, glow, glowColors } = this.grid;
 
-    // Smooth radial light falloff (fades to 0% alpha at perimeter — never hard discs)
+    // Smooth radial light bloom (multi-stop transparent falloff)
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     for (let r = 0; r < rows; r++) {
@@ -339,13 +396,14 @@ export class AsciiCanvasRenderer {
       for (let c = 0; c < cols; c++) {
         const idx = rowOffset + c;
         const g = glow[idx];
-        if (g <= 0.45) continue;
+        if (g <= 0.42) continue;
         const cx = c * cellW + cellW * 0.5;
-        const radius = cellH * (1.2 + g * 1.4);
+        const radius = cellH * (1.8 + g * 2.1);
         const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
         grad.addColorStop(0, glowColors[idx]);
+        grad.addColorStop(0.35, glowColors[idx]);
         grad.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.globalAlpha = 0.08 + g * 0.09;
+        ctx.globalAlpha = 0.14 + g * 0.18;
         ctx.fillStyle = grad;
         ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
       }
