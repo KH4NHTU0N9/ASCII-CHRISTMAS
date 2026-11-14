@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="https://kh4nhtu0ng.github.io/ASCII-CHRISTMAS/" title="Open interactive 3D ASCII Christmas Tree">
-    <img src="./assets/preview.webp" alt="ASCII-CHRISTMAS 3D Terminal Tree" width="500" />
+    <img src="./assets/profile-tree.svg" alt="ASCII-CHRISTMAS 3D Terminal Tree" width="800" />
   </a>
 </p>
 
@@ -49,10 +49,14 @@ ASCII-CHRISTMAS/
 │   ├── syntaxHighlighter.js    # Safe JS tokenizer & HTML escaper
 │   ├── codeTyper.js            # Time-synced typing editor & auto-scroll
 │   ├── codeSource.js           # Live HTTP source loader & offline fallback
+│   ├── svgExporter.js          # Crisp vector SVG + pure CSS 60fps generator
 │   └── main.js                 # Main requestAnimationFrame loop & controls
+├── scripts/
+│   ├── export-svg.mjs          # Generates assets/profile-tree.svg (+ Chrome check)
+│   └── export-preview.mjs      # Optional raster 360° WebP banner exporter
 ├── tests/                      # Automated Node.js unit test suite
 ├── docs/PLAN.md                # 5-Phase project execution plan
-└── assets/                     # Optional custom MP3 folder (ignored by git)
+└── assets/                     # Profile SVG/WebP assets & optional local MP3s
 ```
 
 ## Customization
@@ -87,20 +91,21 @@ Then open `http://127.0.0.1:4173/` in your browser.
 
 ### Embed on Your GitHub Profile (`KH4NHTU0NG/KH4NHTU0NG`)
 
-1. Enable **GitHub Pages** in repository **Settings -> Pages** (`Deploy from a branch` -> `main` -> `/ (root)`).
-2. Add this snippet to your Profile `README.md`:
+1. Ensure **GitHub Pages** is active in repository **Settings -> Pages** (`Deploy from a branch` -> `main` -> `/ (root)`).
+2. Add this snippet to your Profile `README.md` (uses the ultra-crisp 92-row vector SVG with pure CSS `@keyframes` animations, zero blur on Retina displays):
 
 ```markdown
 <p align="center">
   <a href="https://kh4nhtu0ng.github.io/ASCII-CHRISTMAS/" title="Click to open interactive 3D ASCII Christmas Tree">
-    <img src="https://raw.githubusercontent.com/KH4NHTU0NG/ASCII-CHRISTMAS/main/assets/preview.webp" alt="3D ASCII Christmas Tree" width="500" />
+    <img src="https://raw.githubusercontent.com/KH4NHTU0NG/ASCII-CHRISTMAS/main/assets/profile-tree.svg?v=1" alt="3D ASCII Christmas Tree" width="800" />
   </a>
 </p>
 ```
 
-Regenerate the animated WebP preview anytime using local headless Chrome:
+Regenerate the animated vector SVG (and verify CSS animations in Chrome) or the optional 360° raster WebP preview anytime:
 
 ```bash
+node scripts/export-svg.mjs --verify
 node scripts/export-preview.mjs
 ```
 
