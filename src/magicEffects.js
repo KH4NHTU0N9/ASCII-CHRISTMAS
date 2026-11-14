@@ -39,7 +39,7 @@ export function renderMagicSpiral(
   { elapsedSec, rotationDeg, widthPx, heightPx, cellW, cellH, pitchOffset = 0, zoom = 1 }
 ) {
   if (elapsedSec < 1.2) return;
-  const { cols, rows, depth, chars, colors, glow, glowColors } = grid;
+  const { cols, rows, depth, kinds, chars, colors, glow, glowColors } = grid;
   const { cameraPitchRad, cameraDist, cameraTargetY, focalScale } = CONFIG.render;
 
   const yaw = (rotationDeg * Math.PI) / 180;
@@ -87,6 +87,7 @@ export function renderMagicSpiral(
     if (intensity < 0.22) continue;
 
     depth[idx] = zCam;
+    if (kinds) kinds[idx] = -1;
     chars[idx] = p.glyph;
     const colStr = p.warm
       ? `rgb(${Math.round(255 * intensity)},${Math.round(220 * intensity)},${Math.round(108 * intensity)})`
@@ -202,4 +203,84 @@ export function createBurstManager() {
   }
 
   return { spawn, render };
+}
+
+const SMOKE_GLYPHS = ['~', 's', '~', 's', '·'];
+
+/**
+ * Renders gentle curling ASCII chimney smoke (~, s) rising from the cozy cabin.
+ */
+export function renderChimneySmoke(
+  chimneyPos,
+  grid,
+  { elapsedSec, rotationDeg, widthPx, heightPx, cellW, cellH, pitchOffset = 0, zoom = 1 }
+) {
+  if (!chimneyPos || elapsedSec < 6.6) return;
+
+  const { cols, rows, depth, kinds, chars, colors } = grid;
+  const { cameraPitchRad, cameraDist, cameraTargetY, focalScale } = CONFIG.render;
+
+  const yaw = (rotationDeg * Math.PI) / 180;
+  const cy = Math.cos(yaw);
+  const sy = Math.sin(yaw);
+  const pitch = clamp(cameraPitchRad + pitchOffset, -0.35, 0.72);
+  const cp = Math.cos(pitch);
+  const sp = Math.sin(pitch);
+
+  const scalePx = Math.min(heightPx, widthPx * 1.12) * 0.345 * zoom;
+  const centerX = widthPx * 0.5;
+  const centerY = heightPx * 0.49;
+
+  const age = elapsedSec - 6.6;
+  const speed = 0.36;
+  const count = 20;
+
+  for (let i = 0; i < count; i++) {
+    const phaseOff = i / count;
+    const progress = age * speed;
+    if (progress < phaseOff) continue;
+    const cycle = (progress - phaseOff) % 1;
+
+    const rise = cycle * 0.88;
+    const curl = 0.03 + 0.14 * cycle;
+    const wx =
+      chimneyPos[0] +
+      Math.sin(cycle * 5.2 + elapsedSec * 1.9 + i * 0.9) * curl +
+      cycle * 0.18;
+    const wy = chimneyPos[1] + 0.03 + rise - cameraTargetY;
+    const wz =
+      chimneyPos[2] +
+      Math.cos(cycle * 4.4 + elapsedSec * 1.5 + i * 1.1) * (0.02 + 0.09 * cycle);
+
+    const rx = wx * cy + wz * sy;
+    const rz = -wx * sy + wz * cy;
+    const py = wy * cp + rz * sp;
+    const pz = -wy * sp + rz * cp;
+
+    const zCam = cameraDist + pz;
+    if (zCam <= 0.35) continue;
+
+    const proj = focalScale / zCam;
+    const col = Math.floor((centerX + rx * proj * scalePx) / cellW);
+    const row = Math.floor((centerY - py * proj * scalePx) / cellH);
+    if (col < 0 || col >= cols || row < 0 || row >= rows) continue;
+
+    const idx = row * cols + col;
+    if (zCam >= depth[idx]) continue;
+
+    const fade = Math.sin(cycle * Math.PI) * (1 - 0.35 * cycle);
+    if (fade < 0.16) continue;
+
+    depth[idx] = zCam;
+    if (kinds) kinds[idx] = -1;
+    const glyphIdx =
+      cycle > 0.78 ? SMOKE_GLYPHS.length - 1 : (i + Math.floor(cycle * 3)) % 4;
+    chars[idx] = SMOKE_GLYPHS[glyphIdx];
+
+    const lum = clamp(0.38 + 0.58 * fade, 0.25, 0.95);
+    const rr = Math.round(192 * lum);
+    const gg = Math.round(206 * lum);
+    const bb = Math.round(228 * lum);
+    colors[idx] = `rgb(${rr},${gg},${bb})`;
+  }
 }
