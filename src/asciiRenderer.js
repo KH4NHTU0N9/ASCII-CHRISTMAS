@@ -32,11 +32,12 @@ function resetGrid(grid) {
 
 function glyphFromLuminance(lum, kind) {
   if (kind === PART_KINDS.LIGHT) return lum > 0.9 ? '@' : '*';
-  if (kind === PART_KINDS.STAR) return lum > 0.95 ? '@' : '#';
-  if (kind === PART_KINDS.GARLAND) return lum > 0.72 ? '*' : '+';
+  if (kind === PART_KINDS.STAR) return lum > 0.9 ? '@' : '*';
+  if (kind === PART_KINDS.GARLAND) return lum > 0.7 ? '*' : '+';
   if (kind === PART_KINDS.GROUND) {
-    const idx = clamp(Math.floor(lum * 5.2), 1, 5);
-    return RAMP[idx];
+    const groundRamp = ' .·:;~-=+';
+    const idx = clamp(Math.floor(lum * (groundRamp.length - 1)), 1, groundRamp.length - 1);
+    return groundRamp[idx];
   }
   const idx = clamp(Math.floor(lum * (RAMP.length - 1)), 1, RAMP.length - 1);
   return RAMP[idx];
@@ -75,9 +76,9 @@ export function projectSceneToGrid(
   const cp = Math.cos(cameraPitchRad);
   const sp = Math.sin(cameraPitchRad);
 
-  const scalePx = Math.min(heightPx, widthPx * 1.15) * 0.37;
+  const scalePx = Math.min(heightPx, widthPx * 1.15) * 0.34;
   const centerX = widthPx * 0.5;
-  const centerY = heightPx * 0.53;
+  const centerY = heightPx * 0.56;
 
   const { count, positions, normals, colors: pColors, kinds, t0, phase, shine } = scene;
 
@@ -237,12 +238,12 @@ export class AsciiCanvasRenderer {
     this.canvas.height = Math.floor(heightPx * dpr);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    // Choose monospace font size scaled smoothly to viewport height
-    const fontSize = clamp(Math.round(Math.min(heightPx / 50, widthPx / 56)), 8, 13);
+    // Micro-ASCII monospace sizing for high character density & crisp 3D shading
+    const fontSize = clamp(Math.round(Math.min(heightPx / 62, widthPx / 68) * 10) / 10, 6.5, 10);
     this.ctx.font = `600 ${fontSize}px "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace`;
     const measuredW = this.ctx.measureText('M').width || fontSize * 0.6;
-    const cellW = Math.max(4.8, measuredW * 1.0);
-    const cellH = Math.max(8.5, Math.round(fontSize * 1.1));
+    const cellW = Math.max(3.9, measuredW * 0.98);
+    const cellH = Math.max(6.8, Math.round(fontSize * 1.06 * 10) / 10);
 
     const cols = Math.max(32, Math.floor(widthPx / cellW));
     const rows = Math.max(20, Math.floor(heightPx / cellH));

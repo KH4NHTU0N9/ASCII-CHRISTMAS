@@ -110,11 +110,12 @@
 @media (max-width: 600px) {
   .code-scroller {
     padding: 8px 10px 20px;
-    font-size: 11px;
+    font-size: 10px;
+    line-height: 1.45;
   }
 
   .line-no {
-    min-width: 24px;
-    margin-right: 10px;
+    min-width: 22px;
+    margin-right: 9px;
   }
 }

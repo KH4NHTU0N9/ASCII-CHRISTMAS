@@ -18,8 +18,8 @@ export function buildFoliage(buffer, rng, { y0 = 0.42, y1 = 2.55, tiers = 24 } =
 
     for (let b = 0; b < nb; b++) {
       const a = (TAU * b) / nb + i * 0.618 * TAU + rng.normal(0, 0.18);
-      const L = R * rng.uniform(0.82, 1.06);
-      const n = Math.floor(65 + 220 * L);
+      const L = R * rng.uniform(0.78, 1.12);
+      const n = Math.floor(70 + 230 * L);
 
       const dx = Math.cos(a);
       const dz = Math.sin(a);
@@ -27,14 +27,14 @@ export function buildFoliage(buffer, rng, { y0 = 0.42, y1 = 2.55, tiers = 24 } =
       const sideZ = dx;
 
       for (let k = 0; k < n; k++) {
-        const s = Math.pow(rng.random(), 0.65);
-        const spread = (0.035 + 0.105 * s) * rng.normal(0, 1);
+        const s = Math.pow(rng.random(), 0.62);
+        const spread = (0.028 + 0.095 * s) * rng.normal(0, 1);
         const dist = s * L;
         const yy =
           y +
-          0.07 * dist -
-          0.22 * dist * dist +
-          0.028 * rng.normal(0, 1);
+          0.075 * dist -
+          0.26 * dist * dist +
+          0.025 * rng.normal(0, 1);
 
         const px = dx * dist + sideX * spread;
         const pz = dz * dist + sideZ * spread;
@@ -45,14 +45,14 @@ export function buildFoliage(buffer, rng, { y0 = 0.42, y1 = 2.55, tiers = 24 } =
           dz * 0.72 + rng.normal(0, 0.25)
         );
 
-        const ao = 0.35 + 0.65 * Math.pow(s, 1.3);
-        const tone = ao * rng.uniform(0.76, 1.12);
-        const cr = (0.07 + 0.06 * s) * tone;
-        const cg = (0.39 + 0.18 * s) * tone;
-        const cb = (0.13 + 0.06 * s) * tone;
+        const ao = 0.3 + 0.7 * Math.pow(s, 1.25);
+        const tone = ao * rng.uniform(0.76, 1.15);
+        const cr = (0.04 + 0.14 * s) * tone;
+        const cg = (0.36 + 0.30 * s) * tone;
+        const cb = (0.10 + 0.12 * s) * tone;
 
         const t0 = 0.95 + 5.1 * ratio + 0.45 * s;
-        const isSnow = s > 0.48 && rng.random() < 0.085 && ny > 0.32;
+        const isSnow = s > 0.52 && rng.random() < 0.1 && ny > 0.34;
 
         if (isSnow) {
           buffer.addPoint(

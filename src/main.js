@@ -36,7 +36,7 @@ async function bootstrap() {
 
   // Populate identity labels from centralized config
   dom.hudHandle.textContent = CONFIG.identity.handle;
-  dom.greetingText.textContent = `${CONFIG.identity.greeting} · Tap for Music`;
+  dom.greetingText.textContent = `${CONFIG.identity.greeting}`;
   dom.hudLang.textContent = CONFIG.identity.fileLang;
   dom.hudFilename.textContent = CONFIG.identity.fileName;
 
@@ -59,8 +59,8 @@ async function bootstrap() {
     dom.greetingBadge.classList.toggle('is-playing', playing);
     dom.musicLabel.textContent = playing ? 'Playing' : 'Music';
     dom.greetingText.textContent = playing
-      ? `${CONFIG.identity.greeting} · ♪ ${trackName}`
-      : `${CONFIG.identity.greeting} · Tap for Music`;
+      ? `♪ ${trackName}`
+      : CONFIG.identity.greeting;
   });
 
   let startTs = performance.now();

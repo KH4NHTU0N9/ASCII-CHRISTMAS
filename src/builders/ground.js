@@ -16,35 +16,35 @@ export function buildGround(buffer, rng) {
     const fade = Math.pow(1 - f, 0.55);
 
     for (let ia = 0; ia < steps; ia++) {
-      const a = (TAU * ia) / steps + rng.uniform(-0.015, 0.015);
-      const r = rBase + rng.uniform(-0.016, 0.016);
+      const a = (TAU * (ia + rng.uniform(-0.35, 0.35))) / steps;
+      const r = rBase + rng.uniform(-0.025, 0.025);
       const px = r * Math.cos(a);
       const pz = r * Math.sin(a);
 
       // Gentle concentric drift ripples and slight snow mound near trunk
       const mound = 0.07 * Math.exp(-r * r * 1.4);
-      const ripple = 0.014 * Math.sin(r * 9.5 + a * 2.0);
+      const ripple = 0.015 * Math.sin(r * 10.5 + a * 2.0);
       const py = -0.06 + mound + ripple;
 
-      const shade = (0.36 + 0.42 * fade) * rng.uniform(0.86, 1.08);
+      const shade = (0.34 + 0.44 * fade) * rng.uniform(0.84, 1.12);
       const cr = 0.78 * shade;
-      const cg = 0.84 * shade;
-      const cb = 0.96 * shade;
+      const cg = 0.85 * shade;
+      const cb = 0.98 * shade;
 
       buffer.addPoint(
         px,
         py,
         pz,
-        -0.12 * Math.cos(a),
+        0.04 * Math.cos(a),
         1.0,
-        -0.12 * Math.sin(a),
+        0.04 * Math.sin(a),
         cr,
         cg,
         cb,
         PART_KINDS.GROUND,
         0.0,
         0.0,
-        0.05
+        0.02
       );
     }
   }
