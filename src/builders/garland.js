@@ -3,10 +3,11 @@ import { PART_KINDS } from '../partsBuffer.js';
 
 /**
  * Generates a slender, sparkling golden tinsel garland draped in swags
- * around the outer pine branches.
+ * around the outer pine branches. Encodes normalized arc progress into phase
+ * so a continuous light wave travels upward from base to apex.
  */
 export function buildGarland(buffer, rng, { y0 = 0.42, y1 = 2.55 } = {}) {
-  const steps = 840;
+  const steps = 880;
   const turns = 4.2;
   const strands = 3;
 
@@ -20,11 +21,14 @@ export function buildGarland(buffer, rng, { y0 = 0.42, y1 = 2.55 } = {}) {
     const bx = rg * Math.cos(ag);
     const by = yg + swag;
     const bz = rg * Math.sin(ag);
-    const t0 = 5.6 + 2.1 * u;
+    const t0 = 5.4 + 2.1 * u;
+
+    // Monotonic arc phase from 0 at base to 18*PI at top for upward wave chase
+    const arcPhase = u * Math.PI * 18;
 
     for (let k = 0; k < strands; k++) {
       const offAngle = (TAU * k) / strands + u * 28;
-      const rad = 0.011;
+      const rad = 0.012;
       const ox = rad * Math.cos(offAngle) * Math.cos(ag);
       const oy = rad * Math.sin(offAngle);
       const oz = rad * Math.cos(offAngle) * Math.sin(ag);
@@ -35,7 +39,7 @@ export function buildGarland(buffer, rng, { y0 = 0.42, y1 = 2.55 } = {}) {
         Math.sin(ag)
       );
 
-      const gleam = rng.uniform(0.88, 1.12);
+      const gleam = rng.uniform(0.9, 1.12);
       buffer.addPoint(
         bx + ox,
         by + oy,
@@ -44,11 +48,11 @@ export function buildGarland(buffer, rng, { y0 = 0.42, y1 = 2.55 } = {}) {
         ny,
         nz,
         1.0 * gleam,
-        0.84 * gleam,
-        0.26 * gleam,
+        0.86 * gleam,
+        0.28 * gleam,
         PART_KINDS.GARLAND,
         t0,
-        u * TAU * 5,
+        arcPhase,
         0.95
       );
     }
