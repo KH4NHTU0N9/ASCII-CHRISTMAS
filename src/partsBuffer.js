@@ -11,6 +11,8 @@ export const PART_KINDS = Object.freeze({
   SNOWCAP: 7,
   GROUND: 8,
   STAR: 9,
+  CABIN: 10,
+  SNOWMAN: 11,
 });
 
 /**
