@@ -12,10 +12,13 @@ import { buildGifts } from './builders/gifts.js';
 
 export { PART_KINDS, envelope, fibSphere };
 
-// Key light direction (upper front-right) normalized once
+// Primary warm key light (upper front-right) & cool moonlit rim light (back-left)
 const LX = 0.44;
 const LY = 0.72;
 const LZ = 0.54;
+const RX = -0.62;
+const RY = 0.45;
+const RZ = -0.52;
 
 /**
  * Builds the complete 3D Christmas tree point-cloud scene from deterministic
@@ -30,12 +33,12 @@ export function buildTreeScene(overrides = {}) {
   buildGround(parts, rng);
   buildTrunk(parts);
 
-  // --- needles: 24 whorls of drooping branches, dense at the tips
+  // --- needles: 26 whorls of drooping branches, dense at the tips
   const tips = buildFoliage(parts, rng, opts);
 
   // --- tinsel garland, ornament baubles, lights, apex star & gift boxes
   buildGarland(parts, rng, opts);
-  buildBaubles(parts, rng, tips);
+  buildBaubles(parts, rng, tips, opts);
   buildLights(parts, rng, opts);
   buildStar(parts, opts);
   buildGifts(parts);
@@ -44,8 +47,8 @@ export function buildTreeScene(overrides = {}) {
 }
 
 /**
- * Computes shaded luminance and frost-birth flash for a rotated 3D point.
- * Used in real time by the ASCII Z-buffer rasterizer.
+ * Computes key + rim lighting, specular gleam, frost-birth flash, and
+ * selectable fairy light animation modes for each rotated 3D point.
  */
 export function computePointShade(
   nx,
@@ -56,40 +59,45 @@ export function computePointShade(
   elapsedSec,
   t0,
   phase,
+  lightMode = 'twinkle',
   flashWindow = CONFIG.animation.birthFlashWindowSec
 ) {
-  // Lambertian diffuse + Blinn-Phong half-vector specular
-  const diff = Math.max(0, nx * LX + ny * LY + nz * LZ);
+  // Key diffuse + back-left moonlit rim fill + Blinn-Phong specular
+  const keyDiff = Math.max(0, nx * LX + ny * LY + nz * LZ);
+  const rimDiff = Math.max(0, nx * RX + ny * RY + nz * RZ) * 0.42;
   const hx = LX;
   const hy = LY;
   const hz = LZ + 1.0;
   const hLen = Math.hypot(hx, hy, hz) || 1;
   const ndoth = Math.max(0, (nx * hx + ny * hy + nz * hz) / hLen);
-  const spec = shine > 0 ? shine * Math.pow(ndoth, 18) : 0;
+  const spec = shine > 0 ? shine * Math.pow(ndoth, 16) : 0;
 
-  let lum = 0.24 + 0.68 * diff + 0.52 * spec;
+  let lum = 0.48 + 0.72 * keyDiff + rimDiff + 0.58 * spec;
   let birth = 0;
 
   // Progressive bottom-up frost construction shimmer
   const age = elapsedSec - t0;
   if (kind !== PART_KINDS.GROUND && age >= 0 && age < flashWindow) {
     birth = clamp(1 - age / flashWindow, 0, 1);
-    lum += birth * 0.75;
+    lum += birth * 0.85;
   }
 
-  // Twinkling fairy lights & golden apex star pulse
+  // Animated fairy lights, apex starburst, and shimmering tinsel garland
   if (kind === PART_KINDS.LIGHT) {
-    const pulse = 0.42 + 0.58 * (0.5 + 0.5 * Math.sin(elapsedSec * 4.6 + phase));
-    lum = 0.45 + 0.95 * pulse;
+    const wave =
+      lightMode === 'cascade'
+        ? 0.5 + 0.5 * Math.sin(elapsedSec * 5.2 - t0 * 3.0)
+        : 0.5 + 0.5 * Math.sin(elapsedSec * 4.8 + phase);
+    lum = 0.72 + 0.92 * wave;
   } else if (kind === PART_KINDS.STAR) {
-    const shimmer = 0.85 + 0.2 * Math.sin(elapsedSec * 3.2 + phase);
-    lum = Math.max(lum, 0.88) * shimmer;
+    const shimmer = 0.96 + 0.22 * Math.sin(elapsedSec * 3.4 + phase);
+    lum = Math.max(lum, 1.05) * shimmer;
   } else if (kind === PART_KINDS.GARLAND) {
-    const sparkle = 0.82 + 0.24 * Math.sin(elapsedSec * 5.0 + phase);
+    const sparkle = 0.92 + 0.26 * Math.sin(elapsedSec * 5.4 + phase);
     lum *= sparkle;
   }
 
-  return { lum: clamp(lum, 0.08, 1.35), birth };
+  return { lum: clamp(lum, 0.28, 1.55), birth };
 }
 
 /**

@@ -45,12 +45,12 @@ export function buildFoliage(buffer, rng, { y0 = 0.42, y1 = 2.55, tiers = 26 } =
           dz * 0.72 + rng.normal(0, 0.25)
         );
 
-        // Deep inner AO shadow contrasting with bright outer tips for strong 3D relief
-        const ao = 0.18 + 0.82 * Math.pow(s, 1.5);
-        const tone = ao * rng.uniform(0.75, 1.15);
-        const cr = (0.03 + 0.15 * s) * tone;
-        const cg = (0.34 + 0.34 * s) * tone;
-        const cb = (0.09 + 0.12 * s) * tone;
+        // Luminous outer pine tips with rich emerald ambient occlusion in crevices
+        const ao = 0.42 + 0.58 * Math.pow(s, 1.25);
+        const tone = ao * rng.uniform(0.84, 1.18);
+        const cr = (0.06 + 0.2 * s) * tone;
+        const cg = (0.44 + 0.42 * s) * tone;
+        const cb = (0.14 + 0.16 * s) * tone;
 
         const t0 = 0.75 + 4.35 * ratio + 0.38 * s;
         const isSnow = s > 0.56 && rng.random() < 0.09 && ny > 0.36;

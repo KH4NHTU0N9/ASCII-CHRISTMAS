@@ -29,13 +29,13 @@ export function buildTrunk(buffer) {
         ca,
         0,
         sa,
-        0.42 * bark,
-        0.26 * bark,
-        0.14 * bark,
+        0.58 * bark,
+        0.36 * bark,
+        0.2 * bark,
         PART_KINDS.TRUNK,
         t0,
         0.0,
-        0.05
+        0.08
       );
     }
   }
