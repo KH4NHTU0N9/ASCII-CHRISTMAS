@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildTreeScene, PART_KINDS } from '../src/treeEngine.js';
+import { buildTreeScene, computePointShade, PART_KINDS } from '../src/treeEngine.js';
 import { createSkyParticles } from '../src/skyParticles.js';
 import { createAsciiGrid, projectSceneToGrid } from '../src/asciiRenderer.js';
-import { createMagicSpiral } from '../src/magicEffects.js';
+import { createMagicSpiral, renderChimneySmoke } from '../src/magicEffects.js';
 import { highlightLineToHtml, tokenizeLine } from '../src/syntaxHighlighter.js';
 
 test('projectSceneToGrid reveals more glyphs as build progresses over time', () => {
@@ -99,4 +99,120 @@ test('syntaxHighlighter tokenizes JS safely without XSS injection', () => {
   assert.ok(!html.includes('<script>'), 'Raw <script> tag must be escaped');
   assert.ok(html.includes('&lt;script&gt;'));
   assert.ok(html.includes('code-cursor'));
+});
+
+test('village cabin, snowman, rising chimney smoke, and upward spiral pulse work', () => {
+  const scene = buildTreeScene();
+  assert.ok(Array.isArray(scene.chimneyPos) && scene.chimneyPos.length === 3);
+  scene.chimneyPos.forEach((v) => assert.ok(Number.isFinite(v)));
+
+  const grid = createAsciiGrid(150, 70);
+  projectSceneToGrid(scene, grid, {
+    elapsedSec: 10.5,
+    rotationDeg: 0,
+    widthPx: 800,
+    heightPx: 560,
+    cellW: 5.3,
+    cellH: 8.0,
+  });
+
+  let cabinCount = 0;
+  let snowmanCount = 0;
+  for (let i = 0; i < grid.kinds.length; i++) {
+    if (grid.kinds[i] === PART_KINDS.CABIN) cabinCount++;
+    if (grid.kinds[i] === PART_KINDS.SNOWMAN) snowmanCount++;
+  }
+  assert.ok(cabinCount >= 40, `Expected visible cabin cells, got ${cabinCount}`);
+  assert.ok(snowmanCount >= 30, `Expected visible snowman cells, got ${snowmanCount}`);
+
+  // Smoke renders '~' / 's' curls above chimney after cabin completes
+  const smokeGrid = createAsciiGrid(150, 70);
+  renderChimneySmoke(scene.chimneyPos, smokeGrid, {
+    elapsedSec: 12.0,
+    rotationDeg: 0,
+    widthPx: 800,
+    heightPx: 560,
+    cellW: 5.3,
+    cellH: 8.0,
+  });
+  const smokeChars = smokeGrid.chars.filter((c) => c === '~' || c === 's').length;
+  assert.ok(smokeChars >= 5, `Expected rising chimney smoke wisps, got ${smokeChars}`);
+
+  // Spiral garland luminance forms a continuous travelling wave across phase
+  const phases = [0, 1.5, 3.0, 4.5];
+  const lums = phases.map(
+    (ph) => computePointShade(0, 0.2, 1, 0.6, PART_KINDS.GARLAND, 10.0, 6.0, ph, 'twinkle').lum
+  );
+  const spread = Math.max(...lums) - Math.min(...lums);
+  assert.ok(spread > 0.4, `Expected travelling garland wave modulation, got ${spread.toFixed(2)}`);
+});
+
+test('color themes, binary/math glyph sets, and cursor hover repel/glow work', () => {
+  const scene = buildTreeScene();
+  const baseGrid = createAsciiGrid(140, 70);
+  const binGrid = createAsciiGrid(140, 70);
+  const mathGrid = createAsciiGrid(140, 70);
+  const hoverGrid = createAsciiGrid(140, 70);
+
+  projectSceneToGrid(scene, baseGrid, {
+    elapsedSec: 12.0,
+    rotationDeg: 0,
+    widthPx: 800,
+    heightPx: 560,
+    cellW: 5.7,
+    cellH: 8.0,
+    colorTheme: 'cyberpunk',
+    glyphSet: 'ascii',
+  });
+
+  projectSceneToGrid(scene, binGrid, {
+    elapsedSec: 12.0,
+    rotationDeg: 0,
+    widthPx: 800,
+    heightPx: 560,
+    cellW: 5.7,
+    cellH: 8.0,
+    colorTheme: 'frozen',
+    glyphSet: 'binary',
+  });
+
+  for (let i = 0; i < binGrid.kinds.length; i++) {
+    if (binGrid.kinds[i] >= 0) {
+      assert.ok(
+        binGrid.chars[i] === '0' || binGrid.chars[i] === '1',
+        `Expected 0/1 in binary mode, got '${binGrid.chars[i]}'`
+      );
+    }
+  }
+
+  projectSceneToGrid(scene, mathGrid, {
+    elapsedSec: 12.0,
+    rotationDeg: 0,
+    widthPx: 800,
+    heightPx: 560,
+    cellW: 5.7,
+    cellH: 8.0,
+    glyphSet: 'math',
+  });
+  const hasMath = mathGrid.chars.some((c) => '±×÷π∑∫∞'.includes(c));
+  assert.ok(hasMath, 'Expected mathematical glyphs in math mode');
+
+  projectSceneToGrid(scene, hoverGrid, {
+    elapsedSec: 12.0,
+    rotationDeg: 0,
+    widthPx: 800,
+    heightPx: 560,
+    cellW: 5.7,
+    cellH: 8.0,
+    colorTheme: 'cyberpunk',
+    cursor: { active: true, u: 0.5, v: 0.5 },
+  });
+
+  let glowBase = 0;
+  let glowHover = 0;
+  for (let i = 0; i < baseGrid.glow.length; i++) {
+    if (baseGrid.glow[i] > 0.4) glowBase++;
+    if (hoverGrid.glow[i] > 0.4) glowHover++;
+  }
+  assert.ok(glowHover > glowBase, `Expected cursor hover glow increase (${glowHover} > ${glowBase})`);
 });
