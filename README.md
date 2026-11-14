@@ -1,7 +1,7 @@
 # ASCII-CHRISTMAS
 
 <p align="center">
-  <a href="https://kh4nhtu0ng.github.io/ASCII-CHRISTMAS/" title="Open interactive 3D ASCII Christmas Tree">
+  <a href="https://kh4nhtu0n9.github.io/ASCII-CHRISTMAS/" title="Open interactive 3D ASCII Christmas Tree">
     <img src="./assets/profile-tree.svg" alt="ASCII-CHRISTMAS 3D Terminal Tree" width="800" />
   </a>
 </p>
@@ -89,15 +89,15 @@ python3 -m http.server 4173 --bind 127.0.0.1
 
 Then open `http://127.0.0.1:4173/` in your browser.
 
-### Embed on Your GitHub Profile (`KH4NHTU0NG/KH4NHTU0NG`)
+### Embed on Your GitHub Profile (`KH4NHTU0N9/KH4NHTU0N9`)
 
 1. Ensure **GitHub Pages** is active in repository **Settings -> Pages** (`Deploy from a branch` -> `main` -> `/ (root)`).
 2. Add this snippet to your Profile `README.md` (uses the ultra-crisp 70-row, 45-angle slow-rotating 3D vector SVG flipbook with pure CSS `@keyframes`, zero blur on Retina displays):
 
 ```markdown
 <p align="center">
-  <a href="https://kh4nhtu0ng.github.io/ASCII-CHRISTMAS/" title="Click to open interactive 3D ASCII Christmas Tree">
-    <img src="https://raw.githubusercontent.com/KH4NHTU0NG/ASCII-CHRISTMAS/main/assets/profile-tree.svg?v=2" alt="3D ASCII Christmas Tree" width="800" />
+  <a href="https://kh4nhtu0n9.github.io/ASCII-CHRISTMAS/" title="Click to open interactive 3D ASCII Christmas Tree">
+    <img src="https://raw.githubusercontent.com/KH4NHTU0N9/ASCII-CHRISTMAS/main/assets/profile-tree.svg?v=2" alt="3D ASCII Christmas Tree" width="800" />
   </a>
 </p>
 ```
