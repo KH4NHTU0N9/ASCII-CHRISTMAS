@@ -4,19 +4,24 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { renderSceneToAnimatedSvg } from '../src/svgExporter.js';
+import { renderSceneToAnimatedSvg, renderSceneToFlipbookSvg } from '../src/svgExporter.js';
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_OUT = path.join(ROOT_DIR, 'assets', 'profile-tree.svg');
 
 function parseArgs(argv) {
+  const isStatic = argv.includes('--static');
   const opts = {
     outPath: DEFAULT_OUT,
     shotOut: null,
+    shot2Out: null,
     verify: argv.includes('--verify'),
+    isStatic,
     width: 820,
     height: 500,
-    rows: 92,
+    rows: isStatic ? 92 : 70,
+    frames: 45,
+    duration: 22.5,
     rotationDeg: 10,
   };
 
@@ -24,7 +29,10 @@ function parseArgs(argv) {
     const arg = argv[i];
     if (arg === '--out' && argv[i + 1]) opts.outPath = path.resolve(argv[++i]);
     if (arg === '--shot-out' && argv[i + 1]) opts.shotOut = path.resolve(argv[++i]);
+    if (arg === '--shot2-out' && argv[i + 1]) opts.shot2Out = path.resolve(argv[++i]);
     if (arg === '--rows' && argv[i + 1]) opts.rows = Number(argv[++i]);
+    if (arg === '--frames' && argv[i + 1]) opts.frames = Number(argv[++i]);
+    if (arg === '--duration' && argv[i + 1]) opts.duration = Number(argv[++i]);
     if (arg === '--rotation' && argv[i + 1]) opts.rotationDeg = Number(argv[++i]);
   }
   return opts;
@@ -168,7 +176,8 @@ async function verifySvgInChrome(svgContent, opts) {
 
       await new Promise((r) => setTimeout(r, 150));
       const shotARes = await cdp.send('Page.captureScreenshot', { format: 'png' });
-      await new Promise((r) => setTimeout(r, 420));
+      const waitMs = opts.isStatic ? 420 : Math.max(600, Math.round((opts.duration * 1000) / opts.frames) * 4);
+      await new Promise((r) => setTimeout(r, waitMs));
       const shotBRes = await cdp.send('Page.captureScreenshot', { format: 'png' });
 
       const shotA = Buffer.from(shotARes.data, 'base64');
@@ -177,7 +186,11 @@ async function verifySvgInChrome(svgContent, opts) {
 
       if (opts.shotOut) {
         fs.mkdirSync(path.dirname(opts.shotOut), { recursive: true });
-        fs.writeFileSync(opts.shotOut, shotB);
+        fs.writeFileSync(opts.shotOut, shotA);
+      }
+      if (opts.shot2Out) {
+        fs.mkdirSync(path.dirname(opts.shot2Out), { recursive: true });
+        fs.writeFileSync(opts.shot2Out, shotB);
       }
 
       if (!animated) {
@@ -185,7 +198,7 @@ async function verifySvgInChrome(svgContent, opts) {
       }
 
       console.log(
-        `Chrome <img> verify passed: natural=${dims.result.value.naturalWidth}x${dims.result.value.naturalHeight}, CSS animation active (frame delta verified)`
+        `Chrome <img> verify passed: natural=${dims.result.value.naturalWidth}x${dims.result.value.naturalHeight}, CSS animation active (${waitMs}ms frame delta verified)`
       );
     } finally {
       cdp.close();
@@ -199,19 +212,28 @@ async function verifySvgInChrome(svgContent, opts) {
 
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
-  const svg = renderSceneToAnimatedSvg({
-    width: opts.width,
-    height: opts.height,
-    rows: opts.rows,
-    rotationDeg: opts.rotationDeg,
-  });
+  const svg = opts.isStatic
+    ? renderSceneToAnimatedSvg({
+        width: opts.width,
+        height: opts.height,
+        rows: opts.rows,
+        rotationDeg: opts.rotationDeg,
+      })
+    : renderSceneToFlipbookSvg({
+        width: opts.width,
+        height: opts.height,
+        rows: opts.rows,
+        frameCount: opts.frames,
+        durationSec: opts.duration,
+        startRotationDeg: opts.rotationDeg,
+      });
 
   fs.mkdirSync(path.dirname(opts.outPath), { recursive: true });
   fs.writeFileSync(opts.outPath, svg, 'utf8');
 
   const bytes = Buffer.byteLength(svg, 'utf8');
   console.log(
-    `Generated ${path.relative(ROOT_DIR, opts.outPath)} (${bytes} bytes / ${(bytes / 1024).toFixed(1)} KB, rows=${opts.rows}, rotation=${opts.rotationDeg}deg)`
+    `Generated ${path.relative(ROOT_DIR, opts.outPath)} (${bytes} bytes / ${(bytes / 1048576).toFixed(2)} MB, mode=${opts.isStatic ? 'static' : `flipbook ${opts.frames}f/${opts.duration}s`}, rows=${opts.rows})`
   );
 
   if (opts.verify) {
