@@ -64,6 +64,8 @@ async function bootstrap() {
   });
 
   let startTs = performance.now();
+  let lastFrameTs = 0;
+  const targetIntervalMs = 1000 / CONFIG.animation.targetFps;
   let pausedAtElapsed = null;
   let fpsWindowStart = startTs;
   let fpsFrames = 0;
@@ -72,6 +74,7 @@ async function bootstrap() {
   function replay() {
     pausedAtElapsed = null;
     startTs = performance.now();
+    lastFrameTs = 0;
     typer.reset();
   }
 
@@ -145,6 +148,13 @@ async function bootstrap() {
   resizeObserver.observe(dom.canvas);
 
   function tick(now) {
+    requestAnimationFrame(tick);
+
+    if (now - lastFrameTs < targetIntervalMs * 0.92) {
+      return;
+    }
+    lastFrameTs = now;
+
     const elapsedSec =
       pausedAtElapsed !== null ? pausedAtElapsed : (now - startTs) / 1000;
     const rotationDeg = elapsedSec * CONFIG.animation.rotationSpeedDegPerSec;
@@ -168,8 +178,6 @@ async function bootstrap() {
     dom.hudRotation.textContent = telemetry.rotationText;
     dom.hudLights.textContent = String(telemetry.lightsCount);
     dom.hudLetters.textContent = telemetry.lettersText;
-
-    requestAnimationFrame(tick);
   }
 
   requestAnimationFrame(tick);

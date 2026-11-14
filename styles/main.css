@@ -181,13 +181,14 @@ body {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
 }
 
 .hud-file {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  font-size: 11px;
 }
 
 .file-lang {
@@ -203,7 +204,8 @@ body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+  margin-left: auto;
 }
 
 .hud-btn {
@@ -212,8 +214,8 @@ body {
   background: #0d111a;
   color: var(--text-muted);
   font-family: var(--font-mono);
-  font-size: 11px;
-  padding: 3px 8px;
+  font-size: 10px;
+  padding: 2px 6px;
   border-radius: 4px;
   cursor: pointer;
   transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
