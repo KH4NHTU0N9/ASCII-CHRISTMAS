@@ -64,13 +64,26 @@ async function bootstrap() {
   });
 
   let startTs = performance.now();
+  let pausedAtElapsed = null;
   let fpsWindowStart = startTs;
   let fpsFrames = 0;
   let currentFps = CONFIG.animation.targetFps;
 
   function replay() {
+    pausedAtElapsed = null;
     startTs = performance.now();
     typer.reset();
+  }
+
+  function togglePause() {
+    const now = performance.now();
+    if (pausedAtElapsed === null) {
+      pausedAtElapsed = (now - startTs) / 1000;
+      dom.hudFps.textContent = 'paused';
+    } else {
+      startTs = now - pausedAtElapsed * 1000;
+      pausedAtElapsed = null;
+    }
   }
 
   function toggleCodePane() {
@@ -90,22 +103,64 @@ async function bootstrap() {
     if (file) audio.loadLocalFile(file);
   });
 
+  // Drag-and-drop local audio file onto the viewport
+  const viewportEl = dom.canvas.parentElement;
+  viewportEl.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dom.dropOverlay.hidden = false;
+  });
+  viewportEl.addEventListener('dragleave', (e) => {
+    if (!viewportEl.contains(e.relatedTarget)) {
+      dom.dropOverlay.hidden = true;
+    }
+  });
+  viewportEl.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dom.dropOverlay.hidden = true;
+    const file = e.dataTransfer?.files?.[0];
+    if (file && file.type.startsWith('audio/')) {
+      audio.loadLocalFile(file);
+    }
+  });
+
+  // Keyboard shortcuts: M = music, R = replay, C = code pane, Space = pause/resume
+  window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target && ['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+
+    const key = e.key.toLowerCase();
+    if (key === 'm') {
+      audio.toggle();
+    } else if (key === 'r') {
+      replay();
+    } else if (key === 'c') {
+      toggleCodePane();
+    } else if (e.code === 'Space') {
+      e.preventDefault();
+      togglePause();
+    }
+  });
+
   const resizeObserver = new ResizeObserver(() => renderer.resize());
   resizeObserver.observe(dom.canvas);
 
   function tick(now) {
-    const elapsedSec = (now - startTs) / 1000;
+    const elapsedSec =
+      pausedAtElapsed !== null ? pausedAtElapsed : (now - startTs) / 1000;
     const rotationDeg = elapsedSec * CONFIG.animation.rotationSpeedDegPerSec;
 
     const lettersCount = renderer.render(scene, sky, elapsedSec, rotationDeg);
     typer.update(elapsedSec);
 
-    fpsFrames++;
-    const fpsSpan = now - fpsWindowStart;
-    if (fpsSpan >= 500) {
-      currentFps = Math.max(1, Math.round((fpsFrames * 1000) / fpsSpan));
-      fpsFrames = 0;
-      fpsWindowStart = now;
+    if (pausedAtElapsed === null) {
+      fpsFrames++;
+      const fpsSpan = now - fpsWindowStart;
+      if (fpsSpan >= 500) {
+        currentFps = Math.max(1, Math.round((fpsFrames * 1000) / fpsSpan));
+        fpsFrames = 0;
+        fpsWindowStart = now;
+      }
+      dom.hudFps.textContent = `running · ${currentFps} fps`;
     }
 
     const telemetry = computeTelemetry(scene, elapsedSec, rotationDeg, lettersCount);
@@ -113,7 +168,6 @@ async function bootstrap() {
     dom.hudRotation.textContent = telemetry.rotationText;
     dom.hudLights.textContent = String(telemetry.lightsCount);
     dom.hudLetters.textContent = telemetry.lettersText;
-    dom.hudFps.textContent = `running · ${currentFps} fps`;
 
     requestAnimationFrame(tick);
   }
