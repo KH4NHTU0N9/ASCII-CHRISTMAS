@@ -354,6 +354,281 @@ function buildChimneySmokeMarkup(chimneyScreen) {
  * Exports the procedural 3D ASCII Christmas scene as a pure self-contained
  * vector SVG animated exclusively with CSS @keyframes (GitHub README/Camo safe).
  */
+/**
+ * Shared SVG <defs> block with rounded viewport clip, backdrop, and radial glows.
+ */
+function buildSvgDefsMarkup({ width, height, css }) {
+  return `<defs>
+    <clipPath id="vp"><rect width="${width}" height="${height}" rx="12"/></clipPath>
+    <radialGradient id="bg" cx="50%" cy="54%" r="64%">
+      <stop offset="0%" stop-color="#060c1a"/>
+      <stop offset="56%" stop-color="#03050d"/>
+      <stop offset="100%" stop-color="${CONFIG.render.skyColor}"/>
+    </radialGradient>
+    <radialGradient id="gg"><stop offset="0%" stop-color="#ffe484" stop-opacity=".42"/><stop offset="45%" stop-color="#f59e0b" stop-opacity=".14"/><stop offset="100%" stop-color="#000" stop-opacity="0"/></radialGradient>
+    <radialGradient id="gr"><stop offset="0%" stop-color="#ff3b48" stop-opacity=".42"/><stop offset="45%" stop-color="#ef4444" stop-opacity=".14"/><stop offset="100%" stop-color="#000" stop-opacity="0"/></radialGradient>
+    <radialGradient id="ge"><stop offset="0%" stop-color="#32e875" stop-opacity=".40"/><stop offset="45%" stop-color="#22c55e" stop-opacity=".13"/><stop offset="100%" stop-color="#000" stop-opacity="0"/></radialGradient>
+    <radialGradient id="gb"><stop offset="0%" stop-color="#3daeff" stop-opacity=".42"/><stop offset="45%" stop-color="#3b82f6" stop-opacity=".14"/><stop offset="100%" stop-color="#000" stop-opacity="0"/></radialGradient>
+    <radialGradient id="gw"><stop offset="0%" stop-color="#fff7d6" stop-opacity=".55"/><stop offset="45%" stop-color="#fde047" stop-opacity=".18"/><stop offset="100%" stop-color="#000" stop-opacity="0"/></radialGradient>
+    <style>${css}</style>
+  </defs>`;
+}
+
+/**
+ * Shared HUD chrome corner pills (@handle and interactive 3D hint).
+ */
+function buildHudMarkup(width) {
+  const hudLeftLabel = escapeXml(CONFIG.identity.handle);
+  return `<g id="hud">
+      <rect x="16" y="14" width="166" height="24" rx="12" fill="#080e1c" fill-opacity=".82" stroke="#263656" stroke-width="1"/>
+      <circle cx="29" cy="26" r="3" fill="#ffd970"/>
+      <text class="hud-txt" x="39" y="30" fill="#cbd5e1">${hudLeftLabel}</text>
+      <rect x="${width - 154}" y="14" width="138" height="24" rx="12" fill="#080e1c" fill-opacity=".82" stroke="#263656" stroke-width="1"/>
+      <text class="hud-txt" x="${width - 140}" y="30" fill="#94a3b8">interactive 3D &#8599;</text>
+    </g>`;
+}
+
+function quantizeColorHex(rgbStr, step) {
+  const m = /rgb\((\d+),(\d+),(\d+)\)/.exec(rgbStr);
+  if (!m) return '#fff';
+  const snap = (v) => Math.min(255, Math.round(Number(v) / step) * step);
+  const r = snap(m[1]);
+  const g = snap(m[2]);
+  const b = snap(m[3]);
+  const hex = ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
+  if (hex[0] === hex[1] && hex[2] === hex[3] && hex[4] === hex[5]) {
+    return `#${hex[0]}${hex[2]}${hex[4]}`;
+  }
+  return `#${hex}`;
+}
+
+function getOrCreatePaletteClass(paletteMap, hex) {
+  let cls = paletteMap.get(hex);
+  if (!cls) {
+    cls = `k${paletteMap.size.toString(36)}`;
+    paletteMap.set(hex, cls);
+  }
+  return cls;
+}
+
+/**
+ * Serializes a single projected 3D frame into compact tspan-grouped SVG markup
+ * plus sparse additive light halos, bridging short gaps to cut DOM/byte weight.
+ */
+function buildCompressedFrameMarkup(grid, cellW, cellH, fontSize, { paletteMap, colorStep, maxGap = 12 }) {
+  const { cols, rows, kinds, chars, colors, glow, glowColors } = grid;
+  const baselineOffset = fontSize * 0.88;
+  const out = [];
+
+  for (let r = 0; r < rows; r++) {
+    const rowOff = r * cols;
+    const cy = fmt(r * cellH + cellH * 0.5);
+    const items = [];
+
+    for (let c = 0; c < cols; c++) {
+      const idx = rowOff + c;
+      const ch = chars[idx];
+      if (ch === ' ') continue;
+      const cls = getOrCreatePaletteClass(paletteMap, quantizeColorHex(colors[idx], colorStep));
+      items.push({ c, ch, cls });
+
+      const g = glow[idx];
+      if (
+        g > 0.52 &&
+        (kinds[idx] === PART_KINDS.LIGHT || (kinds[idx] === PART_KINDS.STAR && (r + c) % 2 === 0))
+      ) {
+        const gId = kinds[idx] === PART_KINDS.STAR ? 'gw' : classifyGlowGradient(glowColors[idx]);
+        const rad = fmt(cellH * (1.05 + g * 1.15));
+        out.push(`<circle cx="${fmt(c * cellW + cellW * 0.5)}" cy="${cy}" r="${rad}" fill="url(#${gId})"/>`);
+      }
+    }
+
+    if (items.length === 0) continue;
+    const y = fmt(r * cellH + baselineOffset);
+    let i = 0;
+
+    while (i < items.length) {
+      const startC = items[i].c;
+      const baseCls = items[i].cls;
+      let chunk = `<text x="${fmt(startC * cellW)}" y="${y}" class="${baseCls}">`;
+      let curC = startC;
+
+      while (i < items.length) {
+        const spanCls = items[i].cls;
+        let run = '';
+        while (i < items.length && items[i].c - curC <= maxGap && items[i].cls === spanCls) {
+          run += ' '.repeat(items[i].c - curC) + items[i].ch;
+          curC = items[i].c + 1;
+          i++;
+        }
+        const esc = escapeXml(run);
+        chunk += spanCls === baseCls ? esc : `<tspan class="${spanCls}">${esc}</tspan>`;
+        if (i >= items.length || items[i].c - curC > maxGap) break;
+        if (items[i].c > curC) {
+          chunk += ' '.repeat(items[i].c - curC);
+          curC = items[i].c;
+        }
+      }
+
+      chunk += '</text>';
+      out.push(chunk);
+    }
+  }
+
+  return out.join('');
+}
+
+/**
+ * Exports a slow-rotating multi-angle 3D ASCII Christmas SVG flipbook using
+ * pure CSS visibility steps so GitHub Profile README <img> renders Retina-crisp
+ * 360-degree 3D rotation without JavaScript and stays under Camo's 5 MB limit.
+ */
+export function renderSceneToFlipbookSvg({
+  width = 820,
+  height = 500,
+  rows = 70,
+  frameCount = 45,
+  durationSec = 22.5,
+  startRotationDeg = 10,
+  colorStep = 32,
+  colorTheme = 'classic',
+  glyphSet = 'ascii',
+  zoom = 0.99,
+} = {}) {
+  const targetRows = clamp(Math.round(rows), 48, 84);
+  const count = clamp(Math.round(frameCount), 8, 60);
+  const cellH = height / targetRows;
+  const fontSize = clamp(Math.round(cellH * 0.94 * 10) / 10, 3.8, 8.2);
+  const cellW = Number((fontSize * 0.6).toFixed(3));
+  const cols = Math.max(110, Math.floor(width / cellW));
+
+  const scene = buildTreeScene();
+  const grid = createAsciiGrid(cols, targetRows);
+  const magicSpiral = createMagicSpiral();
+  const paletteMap = new Map();
+  const occupiedMask = new Uint8Array(cols * targetRows);
+
+  const stepDeg = 360 / count;
+  const stepSec = durationSec / count;
+  const framesMarkup = [];
+
+  for (let k = 0; k < count; k++) {
+    const rotationDeg = startRotationDeg + k * stepDeg;
+    const elapsedSec = 11.4 + k * 0.24;
+
+    projectSceneToGrid(scene, grid, {
+      elapsedSec,
+      rotationDeg,
+      widthPx: width,
+      heightPx: height,
+      cellW,
+      cellH,
+      sky: null,
+      magicSpiral,
+      lightMode: 'twinkle',
+      zoom,
+      colorTheme,
+      glyphSet,
+    });
+
+    for (let i = 0; i < occupiedMask.length; i++) {
+      if (grid.chars[i] !== ' ') occupiedMask[i] = 1;
+    }
+
+    const inner = buildCompressedFrameMarkup(grid, cellW, cellH, fontSize, {
+      paletteMap,
+      colorStep,
+      maxGap: 12,
+    });
+    const delaySec = -(((count - k) % count) * stepSec);
+    const delayAttr = delaySec === 0 ? '' : ` style="animation-delay:${delaySec.toFixed(2)}s"`;
+    framesMarkup.push(`<g${delayAttr}>${inner}</g>`);
+  }
+
+  // Mask out all cells touched at any rotation angle so background stars never poke through needles
+  const unionGrid = {
+    cols,
+    rows: targetRows,
+    chars: Array.from(occupiedMask, (v) => (v ? '#' : ' ')),
+  };
+  const atmosphereMarkup = buildAtmosphereMarkup({
+    width,
+    height,
+    grid: unionGrid,
+    cellW,
+    cellH,
+    fontSize,
+    elapsedSec: 11.4,
+  });
+
+  const paletteCss = Array.from(paletteMap.entries())
+    .map(([hex, cls]) => `.${cls}{fill:${hex}}`)
+    .join('');
+
+  // Tiny 0.06% overlap across step handoff eliminates blank-frame flicker
+  const visiblePct = Math.min(99, 100 / count + 0.06).toFixed(3);
+  const css = `
+    text {
+      font-family: ${FONT_STACK};
+      font-size: ${fontSize}px;
+      font-weight: 600;
+      white-space: pre;
+      font-variant-ligatures: none;
+      font-feature-settings: "liga" 0, "calt" 0;
+    }
+    .hud-txt {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+    }
+    @keyframes flip {
+      0%, ${visiblePct}% { visibility: visible; }
+      ${(Number(visiblePct) + 0.001).toFixed(3)}%, 100% { visibility: hidden; }
+    }
+    .fr > g {
+      visibility: hidden;
+      animation: flip ${durationSec}s steps(1, end) infinite;
+    }
+    @keyframes twA { 0%,100% { opacity: .40; } 50% { opacity: 1; } }
+    @keyframes twB { 0%,100% { opacity: .34; } 45% { opacity: 1; } 75% { opacity: .58; } }
+    @keyframes auPulse { 0%,100% { opacity: .32; } 50% { opacity: .82; } }
+    @keyframes snowDown { 0% { transform: translate(0px, 0px); } 100% { transform: translate(18px, ${height}px); } }
+    @keyframes meteorFly {
+      0%,82% { opacity: 0; transform: translate(0px, 0px); }
+      85% { opacity: 1; }
+      95% { opacity: .88; transform: translate(188px, 65px); }
+      100% { opacity: 0; transform: translate(220px, 78px); }
+    }
+    .st0 { animation: twA 2.9s ease-in-out infinite; }
+    .st1 { animation: twB 3.7s ease-in-out -1.1s infinite; }
+    .st2 { animation: twA 4.3s ease-in-out -2.2s infinite; }
+    .st3 { animation: twB 3.1s ease-in-out -1.6s infinite; }
+    .st4 { animation: twA 5.1s ease-in-out -.7s infinite; }
+    .au0 { animation: auPulse 7s ease-in-out infinite; }
+    .au1 { animation: auPulse 8.5s ease-in-out -3.4s infinite; }
+    .sn-far { opacity: .48; animation: snowDown 14s linear infinite; }
+    .sn-near { opacity: .82; animation: snowDown 9.2s linear -3.1s infinite; }
+    .meteor { animation: meteorFly 6.4s ease-out infinite; }
+    ${paletteCss}
+  `.replace(/\s+/g, ' ').trim();
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="ASCII-CHRISTMAS 3D Rotating Terminal Tree">
+  ${buildSvgDefsMarkup({ width, height, css })}
+  <g clip-path="url(#vp)">
+    <rect width="${width}" height="${height}" fill="url(#bg)"/>
+    <g id="sky">${atmosphereMarkup}</g>
+    <g class="fr" xml:space="preserve">${framesMarkup.join('')}</g>
+    ${buildHudMarkup(width)}
+  </g>
+  <rect x=".5" y=".5" width="${width - 1}" height="${height - 1}" rx="12" fill="none" stroke="#1e293b" stroke-width="1"/>
+</svg>`;
+}
+
+/**
+ * Exports the procedural 3D ASCII Christmas scene as a pure self-contained
+ * vector SVG animated exclusively with CSS @keyframes (GitHub README/Camo safe).
+ */
 export function renderSceneToAnimatedSvg({
   width = 820,
   height = 500,
@@ -486,24 +761,9 @@ export function renderSceneToAnimatedSvg({
     .smkB { animation: smkB 3.8s ease-out infinite; }
   `.replace(/\s+/g, ' ').trim();
 
-  const hudLeftLabel = escapeXml(CONFIG.identity.handle);
-
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="ASCII-CHRISTMAS 3D Terminal Tree">
-  <defs>
-    <clipPath id="vp"><rect width="${width}" height="${height}" rx="12"/></clipPath>
-    <radialGradient id="bg" cx="50%" cy="54%" r="64%">
-      <stop offset="0%" stop-color="#060c1a"/>
-      <stop offset="56%" stop-color="#03050d"/>
-      <stop offset="100%" stop-color="${CONFIG.render.skyColor}"/>
-    </radialGradient>
-    <radialGradient id="gg"><stop offset="0%" stop-color="#ffe484" stop-opacity=".42"/><stop offset="45%" stop-color="#f59e0b" stop-opacity=".14"/><stop offset="100%" stop-color="#000" stop-opacity="0"/></radialGradient>
-    <radialGradient id="gr"><stop offset="0%" stop-color="#ff3b48" stop-opacity=".42"/><stop offset="45%" stop-color="#ef4444" stop-opacity=".14"/><stop offset="100%" stop-color="#000" stop-opacity="0"/></radialGradient>
-    <radialGradient id="ge"><stop offset="0%" stop-color="#32e875" stop-opacity=".40"/><stop offset="45%" stop-color="#22c55e" stop-opacity=".13"/><stop offset="100%" stop-color="#000" stop-opacity="0"/></radialGradient>
-    <radialGradient id="gb"><stop offset="0%" stop-color="#3daeff" stop-opacity=".42"/><stop offset="45%" stop-color="#3b82f6" stop-opacity=".14"/><stop offset="100%" stop-color="#000" stop-opacity="0"/></radialGradient>
-    <radialGradient id="gw"><stop offset="0%" stop-color="#fff7d6" stop-opacity=".55"/><stop offset="45%" stop-color="#fde047" stop-opacity=".18"/><stop offset="100%" stop-color="#000" stop-opacity="0"/></radialGradient>
-    <style>${css}</style>
-  </defs>
+  ${buildSvgDefsMarkup({ width, height, css })}
   <g clip-path="url(#vp)">
     <rect width="${width}" height="${height}" fill="url(#bg)"/>
     <g id="sky">${atmosphereMarkup}</g>
@@ -512,13 +772,7 @@ export function renderSceneToAnimatedSvg({
     <g id="ribbon">${ribbonWaveMarkup}</g>
     <g id="lights">${lightsMarkup}${starMarkup}</g>
     <g id="smoke">${smokeMarkup}</g>
-    <g id="hud">
-      <rect x="16" y="14" width="166" height="24" rx="12" fill="#080e1c" fill-opacity=".82" stroke="#263656" stroke-width="1"/>
-      <circle cx="29" cy="26" r="3" fill="#ffd970"/>
-      <text class="hud-txt" x="39" y="30" fill="#cbd5e1">${hudLeftLabel}</text>
-      <rect x="${width - 154}" y="14" width="138" height="24" rx="12" fill="#080e1c" fill-opacity=".82" stroke="#263656" stroke-width="1"/>
-      <text class="hud-txt" x="${width - 140}" y="30" fill="#94a3b8">interactive 3D &#8599;</text>
-    </g>
+    ${buildHudMarkup(width)}
   </g>
   <rect x=".5" y=".5" width="${width - 1}" height="${height - 1}" rx="12" fill="none" stroke="#1e293b" stroke-width="1"/>
 </svg>`;
