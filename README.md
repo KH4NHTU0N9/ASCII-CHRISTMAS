@@ -5,11 +5,13 @@ Interactive 3D ASCII Christmas tree web experience built with pure HTML, CSS, Ja
 ## Features
 
 - **3D Point-Cloud ASCII Engine:**
-  - Seeded deterministic geometry (`src/math.js`, `src/treeEngine.js`): snowy ground ripples, textured bark trunk, 24 whorls of drooping pine foliage & upper snowcaps, spiral golden tinsel garland, Fibonacci-sphere baubles, 170 staggered twinkling fairy lights, a 3D bevelled apex star, and wrapped gift boxes with bows.
+  - Seeded deterministic geometry (`src/math.js`, `src/treeEngine.js`): snowy ground ripples, textured bark trunk, 24 whorls of drooping pine foliage & upper snowcaps, upward-pulsing spiral golden tinsel garland (`src/builders/garland.js`), Fibonacci-sphere baubles, 170 staggered twinkling fairy lights, 3D bevelled apex star, wrapped gift boxes with bows, and a cozy village edge featuring a snow-topped wooden cabin (glowing hearth windows + chimney) and 3D snowman (`src/builders/village.js`).
   - Perspective Z-buffer rasterizer (`src/asciiRenderer.js`) with Lambertian + Blinn-Phong lighting, progressive frost-birth shimmer, ASCII halos, and additive light bloom.
-  - Twinkling night starfield, northern aurora shimmer, shooting stars, and wind-swept falling snow (`src/skyParticles.js`, `src/magicEffects.js`).
-- **Interactive Effects & Light Modes:**
-  - Drag to orbit/tilt the 3D tree, scroll to zoom, and click/tap anywhere on the canvas to launch ASCII firework sparkle bursts (`src/magicEffects.js`).
+  - Twinkling night starfield, northern aurora shimmer, shooting stars, falling snow (`src/skyParticles.js`), rising helical stardust, and gentle curling ASCII chimney smoke (`~`, `s`) in `src/magicEffects.js`.
+- **Interactive Camera, Hover & Customization UI:**
+  - Drag to orbit/tilt the 3D tree, scroll to zoom closely (`0.6x–2.8x`) into individual ASCII glyphs on gifts/foliage, double-click to reset view, move pointer over the tree to gently part (`repel`) and brighten nearby particles, and click/tap anywhere to launch ASCII firework sparkle bursts.
+  - **Quick Control Panel (`P` / `⚙ Tune`):** Instantly switch color themes (`Classic`, `Cyberpunk Neon`, `Frozen Ice Blue`), switch ASCII glyph sets (`ASCII`, `Binary 0/1`, `Math ∑∞`), toggle `Auto-Rotate`, or reset the camera.
+  - **Zen Mode (`H` / `⛶ Zen`, `Esc` to exit):** Hides the code pane, HUD bar, and corner telemetry for an unobstructed fullscreen tree view ideal for enjoying or recording video.
   - Cycle 4 fairy-light animation modes (`Twinkle`, `Cascade`, `Warm Gold`, `Aurora`) with the `✦` button or `L` key.
 - **Live Auto-Typing Code Pane:**
   - Displays the live `src/treeEngine.js` source code with syntax highlighting (`src/syntaxHighlighter.js`), line numbers, auto-scroll, and blinking red cursor synced to elapsed time (`src/codeTyper.js`).
@@ -60,6 +62,8 @@ Edit [src/config.js](./src/config.js) to personalize:
 | Key | Action |
 | --- | --- |
 | `L` | Cycle fairy-light modes (Twinkle / Cascade / Warm Gold / Aurora) |
+| `P` | Toggle Quick Control Panel (Color Themes, Glyph Sets, Auto-Rotate) |
+| `H` | Toggle Fullscreen Zen Mode (`Esc` also exits Zen / closes Panel) |
 | `M` | Play / Pause holiday music |
 | `R` | Replay progressive build & live code typing |
 | `C` | Show / Hide bottom code pane |
