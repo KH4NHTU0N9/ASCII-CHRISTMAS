@@ -67,47 +67,47 @@ export function computePointShade(
   lightMode = 'twinkle',
   flashWindow = CONFIG.animation.birthFlashWindowSec
 ) {
-  // Key diffuse + back-left moonlit rim fill + Blinn-Phong specular
+  // Key diffuse + subtle moonlit rim fill + Blinn-Phong specular
   const keyDiff = Math.max(0, nx * LX + ny * LY + nz * LZ);
-  const rimDiff = Math.max(0, nx * RX + ny * RY + nz * RZ) * 0.42;
+  const rimDiff = Math.max(0, nx * RX + ny * RY + nz * RZ) * 0.16;
   const hx = LX;
   const hy = LY;
   const hz = LZ + 1.0;
   const hLen = Math.hypot(hx, hy, hz) || 1;
   const ndoth = Math.max(0, (nx * hx + ny * hy + nz * hz) / hLen);
-  const spec = shine > 0 ? shine * Math.pow(ndoth, 16) : 0;
+  const spec = shine > 0 ? shine * Math.pow(ndoth, 18) : 0;
 
-  let lum = 0.48 + 0.72 * keyDiff + rimDiff + 0.58 * spec;
+  let lum = 0.25 + 0.68 * keyDiff + rimDiff + 0.52 * spec;
   let birth = 0;
 
   // Progressive bottom-up frost construction shimmer
   const age = elapsedSec - t0;
   if (kind !== PART_KINDS.GROUND && age >= 0 && age < flashWindow) {
     birth = clamp(1 - age / flashWindow, 0, 1);
-    lum += birth * 0.85;
+    lum += birth * 0.75;
   }
 
-  // Animated fairy lights, apex starburst, and shimmering tinsel garland
+  // Animated fairy lights, apex starburst, and flowing upward spiral ribbon
   if (kind === PART_KINDS.LIGHT) {
     const wave =
       lightMode === 'cascade'
         ? 0.5 + 0.5 * Math.sin(elapsedSec * 5.2 - t0 * 3.0)
         : 0.5 + 0.5 * Math.sin(elapsedSec * 4.8 + phase);
-    lum = 0.72 + 0.92 * wave;
+    lum = 0.45 + 0.92 * wave;
   } else if (kind === PART_KINDS.STAR) {
-    const shimmer = 0.96 + 0.22 * Math.sin(elapsedSec * 3.4 + phase);
-    lum = Math.max(lum, 1.05) * shimmer;
+    const shimmer = 0.85 + 0.2 * Math.sin(elapsedSec * 3.2 + phase);
+    lum = Math.max(lum, 0.88) * shimmer;
   } else if (kind === PART_KINDS.GARLAND) {
     // Flowing upward spiral pulse (bottom-to-top phase travel)
     const travel = Math.sin(phase - elapsedSec * 7.2);
-    const crest = Math.pow(0.5 + 0.5 * travel, 2.4);
-    lum = 0.58 + 1.15 * crest;
+    const crest = Math.pow(0.5 + 0.5 * travel, 2.8);
+    lum = 0.42 + 0.68 * crest;
   } else if (kind === PART_KINDS.CABIN && shine > 0.6) {
-    const hearthFlicker = 1.04 + 0.14 * Math.sin(elapsedSec * 4.1 + phase);
-    lum = Math.max(lum, 0.98) * hearthFlicker;
+    const hearthFlicker = 0.9 + 0.12 * Math.sin(elapsedSec * 4.1 + phase);
+    lum = Math.max(lum, 0.82) * hearthFlicker;
   }
 
-  return { lum: clamp(lum, 0.28, 1.55), birth };
+  return { lum: clamp(lum, 0.1, 1.35), birth };
 }
 
 /**
