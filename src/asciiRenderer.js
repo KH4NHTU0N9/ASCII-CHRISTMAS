@@ -156,13 +156,19 @@ export function projectSceneToGrid(
     colors[cellIdx] = rgb;
 
     if (kind === PART_KINDS.LIGHT || kind === PART_KINDS.STAR) {
-      const intensity = kind === PART_KINDS.STAR ? 0.95 : clamp(lum - 0.35, 0, 1);
+      const intensity = kind === PART_KINDS.STAR ? 0.95 : clamp(lum - 0.25, 0, 1);
       if (intensity > glow[cellIdx]) {
         glow[cellIdx] = intensity;
         glowColors[cellIdx] = rgb;
       }
+      if (kind === PART_KINDS.STAR || intensity > 0.65) {
+        glow[cellIdx] = Math.max(glow[cellIdx], intensity);
+      }
     }
   }
+
+  // Sprinkle soft ASCII halo sparks onto adjacent empty background cells
+  applyAsciiHalos(grid);
 
   if (sky) {
     renderSkyToGrid(sky, grid, elapsedSec);
@@ -175,6 +181,32 @@ export function projectSceneToGrid(
   }
 
   return lettersCount;
+}
+
+function applyAsciiHalos(grid) {
+  const { cols, rows, depth, chars, colors, glow, glowColors } = grid;
+  const offsets = [
+    [-1, 0],
+    [1, 0],
+    [0, -1],
+    [0, 1],
+  ];
+
+  for (let r = 1; r < rows - 1; r++) {
+    const rowOff = r * cols;
+    for (let c = 1; c < cols - 1; c++) {
+      const idx = rowOff + c;
+      const g = glow[idx];
+      if (g < 0.52) continue;
+      const colStr = glowColors[idx];
+      for (let k = 0; k < 4; k++) {
+        const nIdx = (r + offsets[k][1]) * cols + (c + offsets[k][0]);
+        if (depth[nIdx] < 900 || chars[nIdx] !== ' ') continue;
+        chars[nIdx] = g > 0.85 ? '+' : '·';
+        colors[nIdx] = colStr;
+      }
+    }
+  }
 }
 
 /**
@@ -240,7 +272,29 @@ export class AsciiCanvasRenderer {
     ctx.font = `600 ${fontSize}px "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace`;
     ctx.textBaseline = 'top';
 
-    const { cols, rows, chars, colors } = this.grid;
+    const { cols, rows, chars, colors, glow, glowColors } = this.grid;
+
+    // Additive light bloom pass behind bright lights & apex star
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (let r = 0; r < rows; r++) {
+      const cy = r * cellH + cellH * 0.5;
+      const rowOffset = r * cols;
+      for (let c = 0; c < cols; c++) {
+        const idx = rowOffset + c;
+        const g = glow[idx];
+        if (g <= 0.25) continue;
+        const cx = c * cellW + cellW * 0.5;
+        const radius = cellH * (0.9 + g * 1.15);
+        ctx.globalAlpha = 0.08 + g * 0.14;
+        ctx.fillStyle = glowColors[idx];
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+
     for (let r = 0; r < rows; r++) {
       const y = r * cellH;
       const rowOffset = r * cols;
