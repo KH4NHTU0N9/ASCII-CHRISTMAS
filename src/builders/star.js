@@ -2,16 +2,15 @@ import { TAU, normalize3 } from '../math.js';
 import { PART_KINDS } from '../partsBuffer.js';
 
 /**
- * Generates a 3D bevelled 5-pointed golden star at the tree apex.
+ * Generates a prominent 3D bevelled 5-pointed golden star at the tree apex.
  */
 export function buildStar(buffer, { y1 = 2.55 } = {}) {
-  const cy = y1 + 0.14;
-  const outerR = 0.175;
-  const innerR = 0.072;
-  const depth = 0.042;
+  const cy = y1 + 0.17;
+  const outerR = 0.26;
+  const innerR = 0.115;
+  const depth = 0.055;
   const pointsCount = 10;
 
-  // Build alternating outer/inner perimeter vertices in the XY plane
   const ring = [];
   for (let i = 0; i < pointsCount; i++) {
     const angle = Math.PI / 2 + (TAU * i) / pointsCount;
@@ -19,9 +18,8 @@ export function buildStar(buffer, { y1 = 2.55 } = {}) {
     ring.push([rad * Math.cos(angle), cy + rad * Math.sin(angle)]);
   }
 
-  // Fill both front (+z) and back (-z) bevelled facets
-  const radialSteps = 9;
-  const edgeSteps = 6;
+  const radialSteps = 16;
+  const edgeSteps = 12;
 
   for (const side of [-1, 1]) {
     const apexZ = side * depth;
@@ -43,7 +41,7 @@ export function buildStar(buffer, { y1 = 2.55 } = {}) {
           const px = u * ((1 - v) * ax + v * bx);
           const py = cy + u * ((1 - v) * (ay - cy) + v * (by - cy));
           const pz = (1 - u) * apexZ;
-          const coreGlow = 1.0 - 0.15 * u;
+          const coreGlow = 1.0 - 0.12 * u;
 
           buffer.addPoint(
             px,
@@ -53,10 +51,10 @@ export function buildStar(buffer, { y1 = 2.55 } = {}) {
             ny,
             nz,
             1.0 * coreGlow,
-            0.9 * coreGlow,
+            0.92 * coreGlow,
             0.34,
             PART_KINDS.STAR,
-            6.15 + 0.45 * u,
+            5.15 + 0.45 * u,
             u * 2.0,
             1.0
           );

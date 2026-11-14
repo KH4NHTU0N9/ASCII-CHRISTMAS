@@ -2,24 +2,24 @@ import { PART_KINDS } from '../partsBuffer.js';
 
 const GIFT_SPECS = [
   {
-    cx: -0.44, cz: 0.34, w: 0.26, h: 0.2, d: 0.24, yaw: 0.35,
-    boxCol: [0.92, 0.15, 0.18], ribCol: [1.0, 0.84, 0.26], t0: 8.3,
+    cx: -0.52, cz: 0.42, w: 0.34, h: 0.25, d: 0.3, yaw: 0.35,
+    boxCol: [0.95, 0.16, 0.2], ribCol: [1.0, 0.86, 0.28], t0: 7.2,
   },
   {
-    cx: 0.46, cz: 0.28, w: 0.28, h: 0.22, d: 0.26, yaw: -0.42,
-    boxCol: [0.18, 0.45, 0.96], ribCol: [1.0, 0.84, 0.28], t0: 8.7,
+    cx: 0.54, cz: 0.36, w: 0.36, h: 0.28, d: 0.32, yaw: -0.42,
+    boxCol: [0.2, 0.48, 0.98], ribCol: [1.0, 0.86, 0.3], t0: 7.6,
   },
   {
-    cx: 0.08, cz: 0.56, w: 0.22, h: 0.16, d: 0.2, yaw: 0.18,
-    boxCol: [0.96, 0.68, 0.16], ribCol: [0.92, 0.16, 0.2], t0: 9.0,
+    cx: 0.08, cz: 0.68, w: 0.28, h: 0.21, d: 0.26, yaw: 0.18,
+    boxCol: [0.98, 0.72, 0.18], ribCol: [0.94, 0.16, 0.22], t0: 8.0,
   },
   {
-    cx: -0.32, cz: -0.46, w: 0.24, h: 0.18, d: 0.22, yaw: 0.68,
-    boxCol: [0.16, 0.72, 0.46], ribCol: [0.95, 0.96, 1.0], t0: 9.3,
+    cx: -0.4, cz: -0.54, w: 0.3, h: 0.23, d: 0.28, yaw: 0.68,
+    boxCol: [0.18, 0.76, 0.48], ribCol: [0.96, 0.98, 1.0], t0: 8.4,
   },
   {
-    cx: 0.36, cz: -0.42, w: 0.22, h: 0.17, d: 0.22, yaw: -0.25,
-    boxCol: [0.88, 0.18, 0.36], ribCol: [1.0, 0.88, 0.42], t0: 9.6,
+    cx: 0.44, cz: -0.5, w: 0.28, h: 0.22, d: 0.28, yaw: -0.25,
+    boxCol: [0.92, 0.2, 0.42], ribCol: [1.0, 0.88, 0.42], t0: 8.8,
   },
 ];
 
@@ -41,16 +41,16 @@ function addBoxPoint(buffer, spec, lx, ly, lz, lnx, lny, lnz, isRibbon) {
     wx, wy, wz,
     wnx, lny, wnz,
     col[0], col[1], col[2],
-    kind, t0, 0.0, isRibbon ? 0.6 : 0.22
+    kind, t0, 0.0, isRibbon ? 0.65 : 0.25
   );
 }
 
 function sampleGiftBox(buffer, spec) {
   const hw = spec.w * 0.5;
   const hd = spec.d * 0.5;
-  const ribbonBand = 0.03;
-  const nu = 14;
-  const nv = 12;
+  const ribbonBand = 0.04;
+  const nu = 22;
+  const nv = 18;
 
   // Top face
   for (let iu = 0; iu <= nu; iu++) {
@@ -87,11 +87,11 @@ function sampleGiftBox(buffer, spec) {
   }
 
   // Ribbon bow loop on top center
-  for (let k = 0; k < 16; k++) {
-    const a = (Math.PI * 2 * k) / 16;
-    const rx = 0.042 * Math.cos(a);
-    const ry = spec.h + 0.02 + 0.018 * Math.abs(Math.sin(a));
-    const rz = 0.018 * Math.sin(a * 2);
+  for (let k = 0; k < 28; k++) {
+    const a = (Math.PI * 2 * k) / 28;
+    const rx = 0.056 * Math.cos(a);
+    const ry = spec.h + 0.024 + 0.024 * Math.abs(Math.sin(a));
+    const rz = 0.024 * Math.sin(a * 2);
     addBoxPoint(buffer, spec, rx, ry, rz, 0, 1, 0, true);
   }
 }

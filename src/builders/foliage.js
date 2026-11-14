@@ -51,7 +51,7 @@ export function buildFoliage(buffer, rng, { y0 = 0.42, y1 = 2.55, tiers = 24 } =
         const cg = (0.36 + 0.30 * s) * tone;
         const cb = (0.10 + 0.12 * s) * tone;
 
-        const t0 = 0.95 + 5.1 * ratio + 0.45 * s;
+        const t0 = 0.75 + 4.4 * ratio + 0.38 * s;
         const isSnow = s > 0.52 && rng.random() < 0.1 && ny > 0.34;
 
         if (isSnow) {

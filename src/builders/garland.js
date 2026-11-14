@@ -2,28 +2,28 @@ import { TAU, envelope, normalize3 } from '../math.js';
 import { PART_KINDS } from '../partsBuffer.js';
 
 /**
- * Generates a drooping golden tinsel garland spiralling up the tree in swags.
+ * Generates a thick, drooping golden tinsel garland draped outside the branches.
  */
 export function buildGarland(buffer, rng, { y0 = 0.42, y1 = 2.55 } = {}) {
-  const steps = 420;
-  const turns = 3.6;
-  const strands = 5;
+  const steps = 680;
+  const turns = 4.0;
+  const strands = 7;
 
   for (let i = 0; i < steps; i++) {
     const u = i / (steps - 1);
-    const yg = y0 + 0.15 + (y1 - y0 - 0.45) * u;
+    const yg = y0 + 0.14 + (y1 - y0 - 0.36) * u;
     const ag = TAU * turns * u + 0.9;
-    const swag = -0.06 * Math.abs(Math.sin(ag * 2.5));
-    const rg = envelope(yg, y0, y1) * 1.02 + 0.03;
+    const swag = -0.055 * Math.abs(Math.sin(ag * 2.5));
+    const rg = envelope(yg, y0, y1) * 1.1 + 0.045;
 
     const bx = rg * Math.cos(ag);
     const by = yg + swag;
     const bz = rg * Math.sin(ag);
-    const t0 = 6.5 + 1.9 * u;
+    const t0 = 5.7 + 2.1 * u;
 
     for (let k = 0; k < strands; k++) {
-      const offAngle = (TAU * k) / strands + u * 18;
-      const rad = 0.014;
+      const offAngle = (TAU * k) / strands + u * 22;
+      const rad = 0.021;
       const ox = rad * Math.cos(offAngle) * Math.cos(ag);
       const oy = rad * Math.sin(offAngle);
       const oz = rad * Math.cos(offAngle) * Math.sin(ag);
@@ -34,7 +34,7 @@ export function buildGarland(buffer, rng, { y0 = 0.42, y1 = 2.55 } = {}) {
         Math.sin(ag)
       );
 
-      const gleam = rng.uniform(0.82, 1.05);
+      const gleam = rng.uniform(0.86, 1.08);
       buffer.addPoint(
         bx + ox,
         by + oy,
@@ -43,12 +43,12 @@ export function buildGarland(buffer, rng, { y0 = 0.42, y1 = 2.55 } = {}) {
         ny,
         nz,
         1.0 * gleam,
-        0.82 * gleam,
-        0.26 * gleam,
+        0.84 * gleam,
+        0.24 * gleam,
         PART_KINDS.GARLAND,
         t0,
         u * TAU * 4,
-        0.75
+        0.85
       );
     }
   }
