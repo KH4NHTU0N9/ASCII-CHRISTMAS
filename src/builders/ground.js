@@ -34,10 +34,10 @@ export function buildGround(buffer, rng) {
       const ripple = 0.011 * Math.sin(r * 10.5 + Math.atan2(pz, px) * 2.0);
       const py = -0.06 + mound + ripple;
 
-      const shade = (0.42 + 0.58 * fade) * rng.uniform(0.9, 1.12);
-      let cr = 0.82 * shade;
-      let cg = 0.89 * shade;
-      let cb = 1.0 * shade;
+      const shade = (0.22 + 0.58 * fade) * rng.uniform(0.88, 1.08);
+      let cr = 0.74 * shade;
+      let cg = 0.82 * shade;
+      let cb = 0.98 * shade;
 
       for (let g = 0; g < FLOOR_GLOWS.length; g++) {
         const gl = FLOOR_GLOWS[g];
