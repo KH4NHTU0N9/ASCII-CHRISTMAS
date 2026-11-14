@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="https://kh4nhtu0ng.github.io/ASCII-CHRISTMAS/" title="Open interactive 3D ASCII Christmas Tree">
-    <img src="./assets/preview.webp" alt="ASCII-CHRISTMAS 3D Terminal Tree" width="760" />
+    <img src="./assets/preview.webp" alt="ASCII-CHRISTMAS 3D Terminal Tree" width="500" />
   </a>
 </p>
 
@@ -93,7 +93,7 @@ Then open `http://127.0.0.1:4173/` in your browser.
 ```markdown
 <p align="center">
   <a href="https://kh4nhtu0ng.github.io/ASCII-CHRISTMAS/" title="Click to open interactive 3D ASCII Christmas Tree">
-    <img src="https://raw.githubusercontent.com/KH4NHTU0NG/ASCII-CHRISTMAS/main/assets/preview.webp" alt="3D ASCII Christmas Tree" width="760" />
+    <img src="https://raw.githubusercontent.com/KH4NHTU0NG/ASCII-CHRISTMAS/main/assets/preview.webp" alt="3D ASCII Christmas Tree" width="500" />
   </a>
 </p>
 ```
