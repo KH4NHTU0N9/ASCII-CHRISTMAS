@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="https://kh4nhtu0n9.github.io/ASCII-CHRISTMAS/" title="Open interactive 3D ASCII Christmas Tree">
-    <img src="./assets/profile-tree.svg" alt="ASCII-CHRISTMAS 3D Terminal Tree" width="800" />
+    <img src="./assets/preview.webp" alt="ASCII-CHRISTMAS 3D Terminal Tree" width="640" />
   </a>
 </p>
 
@@ -92,21 +92,21 @@ Then open `http://127.0.0.1:4173/` in your browser.
 ### Embed on Your GitHub Profile (`KH4NHTU0N9/KH4NHTU0N9`)
 
 1. Ensure **GitHub Pages** is active in repository **Settings -> Pages** (`Deploy from a branch` -> `main` -> `/ (root)`).
-2. Add this snippet to your Profile `README.md` (uses the ultra-crisp 70-row, 45-angle slow-rotating 3D vector SVG flipbook with pure CSS `@keyframes`, zero blur on Retina displays):
+2. Add this snippet to your Profile `README.md` (uses the `1080×670` Retina `2x` Animated WebP with `-sharp_yuv` inter-frame delta compression — smooth `~14.7 FPS` 360° 3D rotation, crisp 78-row micro-ASCII glyphs, zero SVG DOM lag):
 
 ```markdown
 <p align="center">
   <a href="https://kh4nhtu0n9.github.io/ASCII-CHRISTMAS/" title="Click to open interactive 3D ASCII Christmas Tree">
-    <img src="https://raw.githubusercontent.com/KH4NHTU0N9/ASCII-CHRISTMAS/main/assets/profile-tree.svg?v=2" alt="3D ASCII Christmas Tree" width="800" />
+    <img src="https://raw.githubusercontent.com/KH4NHTU0N9/ASCII-CHRISTMAS/main/assets/preview.webp?v=2" alt="3D ASCII Christmas Tree" width="640" />
   </a>
 </p>
 ```
 
-Regenerate the slow-rotating 3D SVG flipbook (or pass `--static` for a single 92-row frame) and verify CSS animations in Chrome:
+Regenerate the Retina Animated WebP (via `img2webp` delta compression + Chrome check) or the optional lightweight 1-angle vector SVG anytime:
 
 ```bash
-node scripts/export-svg.mjs --verify
 node scripts/export-preview.mjs
+node scripts/export-svg.mjs --static --verify
 ```
 
 Run the automated test suite (Node.js 24+):
