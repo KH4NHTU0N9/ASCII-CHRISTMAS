@@ -9,6 +9,7 @@ import { buildBaubles } from './builders/baubles.js';
 import { buildLights } from './builders/lights.js';
 import { buildStar } from './builders/star.js';
 import { buildGifts } from './builders/gifts.js';
+import { buildVillage } from './builders/village.js';
 
 export { PART_KINDS, envelope, fibSphere };
 
@@ -36,14 +37,18 @@ export function buildTreeScene(overrides = {}) {
   // --- needles: 26 whorls of drooping branches, dense at the tips
   const tips = buildFoliage(parts, rng, opts);
 
-  // --- tinsel garland, ornament baubles, lights, apex star & gift boxes
+  // --- tinsel garland, ornament baubles, lights, apex star, gifts & village
   buildGarland(parts, rng, opts);
   buildBaubles(parts, rng, tips, opts);
   buildLights(parts, rng, opts);
   buildStar(parts, opts);
   buildGifts(parts);
+  const { chimneyPos } = buildVillage(parts);
 
-  return parts.toSceneBuffers();
+  return {
+    ...parts.toSceneBuffers(),
+    chimneyPos,
+  };
 }
 
 /**
@@ -93,8 +98,13 @@ export function computePointShade(
     const shimmer = 0.96 + 0.22 * Math.sin(elapsedSec * 3.4 + phase);
     lum = Math.max(lum, 1.05) * shimmer;
   } else if (kind === PART_KINDS.GARLAND) {
-    const sparkle = 0.92 + 0.26 * Math.sin(elapsedSec * 5.4 + phase);
-    lum *= sparkle;
+    // Flowing upward spiral pulse (bottom-to-top phase travel)
+    const travel = Math.sin(phase - elapsedSec * 7.2);
+    const crest = Math.pow(0.5 + 0.5 * travel, 2.4);
+    lum = 0.58 + 1.15 * crest;
+  } else if (kind === PART_KINDS.CABIN && shine > 0.6) {
+    const hearthFlicker = 1.04 + 0.14 * Math.sin(elapsedSec * 4.1 + phase);
+    lum = Math.max(lum, 0.98) * hearthFlicker;
   }
 
   return { lum: clamp(lum, 0.28, 1.55), birth };
