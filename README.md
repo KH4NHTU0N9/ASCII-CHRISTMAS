@@ -1,5 +1,11 @@
 # ASCII-CHRISTMAS
 
+<p align="center">
+  <a href="https://kh4nhtu0ng.github.io/ASCII-CHRISTMAS/" title="Open interactive 3D ASCII Christmas Tree">
+    <img src="./assets/preview.webp" alt="ASCII-CHRISTMAS 3D Terminal Tree" width="760" />
+  </a>
+</p>
+
 Interactive 3D ASCII Christmas tree web experience built with pure HTML, CSS, JavaScript (ES Modules), and HTML5 Canvas 2D (`CanvasRenderingContext2D`), featuring progressive bottom-up tree construction, Z-buffered micro-ASCII lighting, falling snow, a live auto-typing code pane, and autoplay-compliant holiday music.
 
 ## Features
@@ -78,6 +84,25 @@ python3 -m http.server 4173 --bind 127.0.0.1
 ```
 
 Then open `http://127.0.0.1:4173/` in your browser.
+
+### Embed on Your GitHub Profile (`KH4NHTU0NG/KH4NHTU0NG`)
+
+1. Enable **GitHub Pages** in repository **Settings -> Pages** (`Deploy from a branch` -> `main` -> `/ (root)`).
+2. Add this snippet to your Profile `README.md`:
+
+```markdown
+<p align="center">
+  <a href="https://kh4nhtu0ng.github.io/ASCII-CHRISTMAS/" title="Click to open interactive 3D ASCII Christmas Tree">
+    <img src="https://raw.githubusercontent.com/KH4NHTU0NG/ASCII-CHRISTMAS/main/assets/preview.webp" alt="3D ASCII Christmas Tree" width="760" />
+  </a>
+</p>
+```
+
+Regenerate the animated WebP preview anytime using local headless Chrome:
+
+```bash
+node scripts/export-preview.mjs
+```
 
 Run the automated test suite (Node.js 24+):
 
