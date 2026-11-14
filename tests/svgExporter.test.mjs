@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { escapeXml, projectWorldPoint, renderSceneToAnimatedSvg, rgbToHex } from '../src/svgExporter.js';
+import {
+  escapeXml,
+  projectWorldPoint,
+  renderSceneToAnimatedSvg,
+  renderSceneToFlipbookSvg,
+  rgbToHex,
+} from '../src/svgExporter.js';
 
 test('escapeXml encodes special XML characters cleanly', () => {
   assert.equal(escapeXml(`<&>"'`), '&lt;&amp;&gt;&quot;&#39;');
@@ -39,4 +45,20 @@ test('renderSceneToAnimatedSvg produces compact GitHub-safe animated vector SVG'
   assert.ok(treeSection.length > 1000, 'Static tree section should exist');
   assert.equal((treeSection.match(/>s</g) || []).length, 0, 'Static smoke must not duplicate inside tree layer');
   assert.ok(bytes > 50_000 && bytes < 500_000, `Unexpected SVG byte size: ${bytes}`);
+});
+
+test('renderSceneToFlipbookSvg emits GitHub-safe 360-deg rotating vector flipbook under 4.5 MB', () => {
+  const svg = renderSceneToFlipbookSvg({ rows: 64, frameCount: 12, durationSec: 6 });
+  const bytes = Buffer.byteLength(svg, 'utf8');
+
+  assert.ok(svg.startsWith('<?xml version="1.0" encoding="UTF-8"?>'));
+  assert.ok(!svg.includes('<script'));
+  const withoutXmlns = svg.replaceAll('xmlns="http://www.w3.org/2000/svg"', '');
+  assert.ok(!withoutXmlns.includes('http://') && !withoutXmlns.includes('https://'));
+  assert.ok(svg.includes('@keyframes flip'));
+  assert.ok(svg.includes('visibility: visible'));
+  assert.ok(svg.includes('white-space: pre'));
+  const frameGroups = svg.match(/<g class="fr" xml:space="preserve">([\s\S]*?)<\/g>\s*<g id="hud">/)?.[1] || '';
+  assert.equal((frameGroups.match(/<\/g>/g) || []).length, 12);
+  assert.ok(bytes > 100_000 && bytes < 4_500_000, `Flipbook size exceeded budget: ${bytes}`);
 });
