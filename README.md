@@ -7,7 +7,10 @@ Interactive 3D ASCII Christmas tree web experience built with pure HTML, CSS, Ja
 - **3D Point-Cloud ASCII Engine:**
   - Seeded deterministic geometry (`src/math.js`, `src/treeEngine.js`): snowy ground ripples, textured bark trunk, 24 whorls of drooping pine foliage & upper snowcaps, spiral golden tinsel garland, Fibonacci-sphere baubles, 170 staggered twinkling fairy lights, a 3D bevelled apex star, and wrapped gift boxes with bows.
   - Perspective Z-buffer rasterizer (`src/asciiRenderer.js`) with Lambertian + Blinn-Phong lighting, progressive frost-birth shimmer, ASCII halos, and additive light bloom.
-  - Twinkling night starfield and parallax falling snowflakes (`src/skyParticles.js`).
+  - Twinkling night starfield, northern aurora shimmer, shooting stars, and wind-swept falling snow (`src/skyParticles.js`, `src/magicEffects.js`).
+- **Interactive Effects & Light Modes:**
+  - Drag to orbit/tilt the 3D tree, scroll to zoom, and click/tap anywhere on the canvas to launch ASCII firework sparkle bursts (`src/magicEffects.js`).
+  - Cycle 4 fairy-light animation modes (`Twinkle`, `Cascade`, `Warm Gold`, `Aurora`) with the `✦` button or `L` key.
 - **Live Auto-Typing Code Pane:**
   - Displays the live `src/treeEngine.js` source code with syntax highlighting (`src/syntaxHighlighter.js`), line numbers, auto-scroll, and blinking red cursor synced to elapsed time (`src/codeTyper.js`).
   - Toggleable via the `</> Code` button or `C` key to expand the 3D tree viewport full screen.
@@ -56,6 +59,7 @@ Edit [src/config.js](./src/config.js) to personalize:
 
 | Key | Action |
 | --- | --- |
+| `L` | Cycle fairy-light modes (Twinkle / Cascade / Warm Gold / Aurora) |
 | `M` | Play / Pause holiday music |
 | `R` | Replay progressive build & live code typing |
 | `C` | Show / Hide bottom code pane |

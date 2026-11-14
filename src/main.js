@@ -1,10 +1,19 @@
 import { CONFIG } from './config.js';
+import { clamp } from './math.js';
 import { buildTreeScene, computeTelemetry } from './treeEngine.js';
 import { createSkyParticles } from './skyParticles.js';
 import { AsciiCanvasRenderer } from './asciiRenderer.js';
+import { createBurstManager, createMagicSpiral } from './magicEffects.js';
 import { AudioController } from './audioController.js';
 import { CodeTyper } from './codeTyper.js';
 import { FALLBACK_SOURCE, loadLiveCodeSource } from './codeSource.js';
+
+const LIGHT_MODES = [
+  { id: 'twinkle', label: 'Twinkle' },
+  { id: 'cascade', label: 'Cascade' },
+  { id: 'warm', label: 'Warm Gold' },
+  { id: 'aurora', label: 'Aurora' },
+];
 
 function getDomRefs() {
   return {
@@ -20,6 +29,8 @@ function getDomRefs() {
     hudLang: document.getElementById('hud-lang'),
     hudFilename: document.getElementById('hud-filename'),
     hudFps: document.getElementById('hud-fps'),
+    btnMode: document.getElementById('btn-mode'),
+    modeLabel: document.getElementById('mode-label'),
     btnMusic: document.getElementById('btn-music'),
     musicLabel: document.getElementById('music-label'),
     btnMp3: document.getElementById('btn-mp3'),
@@ -34,14 +45,15 @@ function getDomRefs() {
 async function bootstrap() {
   const dom = getDomRefs();
 
-  // Populate identity labels from centralized config
   dom.hudHandle.textContent = CONFIG.identity.handle;
-  dom.greetingText.textContent = `${CONFIG.identity.greeting}`;
+  dom.greetingText.textContent = CONFIG.identity.greeting;
   dom.hudLang.textContent = CONFIG.identity.fileLang;
   dom.hudFilename.textContent = CONFIG.identity.fileName;
 
   const scene = buildTreeScene();
   const sky = createSkyParticles(2026);
+  const magicSpiral = createMagicSpiral(58, 99);
+  const bursts = createBurstManager();
   const renderer = new AsciiCanvasRenderer(dom.canvas);
   const typer = new CodeTyper(
     dom.codeScroller,
@@ -49,7 +61,6 @@ async function bootstrap() {
     CONFIG.animation.typingDurationSec
   );
 
-  // Load real live treeEngine.js content when served over HTTP
   loadLiveCodeSource().then((liveText) => {
     typer.setSource(liveText);
   });
@@ -71,10 +82,25 @@ async function bootstrap() {
   let fpsFrames = 0;
   let currentFps = CONFIG.animation.targetFps;
 
+  let lightModeIndex = 0;
+  let yawOffsetDeg = 0;
+  let pitchOffset = 0;
+  let zoom = 1;
+
+  function cycleLightMode() {
+    lightModeIndex = (lightModeIndex + 1) % LIGHT_MODES.length;
+    const mode = LIGHT_MODES[lightModeIndex];
+    dom.modeLabel.textContent = mode.label;
+    dom.btnMode.classList.toggle('is-active', lightModeIndex !== 0);
+  }
+
   function replay() {
     pausedAtElapsed = null;
     startTs = performance.now();
     lastFrameTs = 0;
+    yawOffsetDeg = 0;
+    pitchOffset = 0;
+    zoom = 1;
     typer.reset();
   }
 
@@ -95,6 +121,7 @@ async function bootstrap() {
     requestAnimationFrame(() => renderer.resize());
   }
 
+  dom.btnMode.addEventListener('click', cycleLightMode);
   dom.btnMusic.addEventListener('click', () => audio.toggle());
   dom.greetingBadge.addEventListener('click', () => audio.toggle());
   dom.btnReplay.addEventListener('click', replay);
@@ -105,6 +132,50 @@ async function bootstrap() {
     const file = e.target.files?.[0];
     if (file) audio.loadLocalFile(file);
   });
+
+  // Pointer drag to orbit/tilt 3D tree; tap/click to launch firework sparks
+  let dragState = null;
+  dom.canvas.addEventListener('pointerdown', (e) => {
+    dragState = {
+      id: e.pointerId,
+      lastX: e.clientX,
+      lastY: e.clientY,
+      moved: 0,
+    };
+    dom.canvas.setPointerCapture(e.pointerId);
+  });
+
+  dom.canvas.addEventListener('pointermove', (e) => {
+    if (!dragState || e.pointerId !== dragState.id) return;
+    const dx = e.clientX - dragState.lastX;
+    const dy = e.clientY - dragState.lastY;
+    dragState.lastX = e.clientX;
+    dragState.lastY = e.clientY;
+    dragState.moved += Math.hypot(dx, dy);
+
+    yawOffsetDeg += dx * 0.45;
+    pitchOffset = clamp(pitchOffset + dy * 0.004, -0.32, 0.48);
+  });
+
+  const endDrag = (e) => {
+    if (!dragState || e.pointerId !== dragState.id) return;
+    if (dragState.moved < 6) {
+      const rect = dom.canvas.getBoundingClientRect();
+      const u = clamp((e.clientX - rect.left) / Math.max(1, rect.width), 0, 1);
+      const v = clamp((e.clientY - rect.top) / Math.max(1, rect.height), 0, 1);
+      bursts.spawn(u, v);
+    }
+    dragState = null;
+  };
+  dom.canvas.addEventListener('pointerup', endDrag);
+  dom.canvas.addEventListener('pointercancel', () => {
+    dragState = null;
+  });
+
+  dom.canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    zoom = clamp(zoom - e.deltaY * 0.001, 0.68, 1.55);
+  }, { passive: false });
 
   // Drag-and-drop local audio file onto the viewport
   const viewportEl = dom.canvas.parentElement;
@@ -126,7 +197,7 @@ async function bootstrap() {
     }
   });
 
-  // Keyboard shortcuts: M = music, R = replay, C = code pane, Space = pause/resume
+  // Keyboard shortcuts: M = music, L = light mode, R = replay, C = code pane, Space = pause
   window.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.target && ['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
@@ -134,6 +205,8 @@ async function bootstrap() {
     const key = e.key.toLowerCase();
     if (key === 'm') {
       audio.toggle();
+    } else if (key === 'l') {
+      cycleLightMode();
     } else if (key === 'r') {
       replay();
     } else if (key === 'c') {
@@ -157,9 +230,16 @@ async function bootstrap() {
 
     const elapsedSec =
       pausedAtElapsed !== null ? pausedAtElapsed : (now - startTs) / 1000;
-    const rotationDeg = elapsedSec * CONFIG.animation.rotationSpeedDegPerSec;
+    const rotationDeg =
+      elapsedSec * CONFIG.animation.rotationSpeedDegPerSec + yawOffsetDeg;
 
-    const lettersCount = renderer.render(scene, sky, elapsedSec, rotationDeg);
+    const lettersCount = renderer.render(scene, sky, elapsedSec, rotationDeg, {
+      magicSpiral,
+      bursts,
+      lightMode: LIGHT_MODES[lightModeIndex].id,
+      pitchOffset,
+      zoom,
+    });
     typer.update(elapsedSec);
 
     if (pausedAtElapsed === null) {
@@ -182,7 +262,7 @@ async function bootstrap() {
 
   requestAnimationFrame(tick);
 
-  return { replay, toggleCodePane, audio, renderer };
+  return { replay, toggleCodePane, cycleLightMode, audio, renderer };
 }
 
 bootstrap();
