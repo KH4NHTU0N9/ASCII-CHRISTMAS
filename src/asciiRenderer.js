@@ -343,24 +343,19 @@ export function projectSceneToGrid(
 
     const shadeFactor =
       kind === PART_KINDS.LIGHT || kind === PART_KINDS.STAR
-        ? Math.max(0.95, lum)
-        : 0.48 + 0.88 * lum;
+        ? Math.max(0.75, lum)
+        : 0.25 + 0.92 * lum;
 
-    // Subtle perceptual gamma lift so thin micro-ASCII glyphs glow brightly on dark canvas
-    const rRaw = Math.pow(clamp(baseR * shadeFactor, 0, 1.35), 0.82);
-    const gRaw = Math.pow(clamp(baseG * shadeFactor, 0, 1.35), 0.82);
-    const bRaw = Math.pow(clamp(baseB * shadeFactor, 0, 1.35), 0.82);
+    const flashMix = clamp(birth * 0.72 + hoverBoost * 0.34, 0, 0.82);
+    let rLin = baseR * shadeFactor * (1 - flashMix) + 0.96 * flashMix;
+    let gLin = baseG * shadeFactor * (1 - flashMix) + 0.98 * flashMix;
+    let bLin = baseB * shadeFactor * (1 - flashMix) + 1.0 * flashMix;
 
-    const flashMix = clamp(birth * 0.72 + hoverBoost * 0.36, 0, 0.88);
-    let rLin = rRaw * (1 - flashMix) + 0.98 * flashMix;
-    let gLin = gRaw * (1 - flashMix) + 0.99 * flashMix;
-    let bLin = bRaw * (1 - flashMix) + 1.0 * flashMix;
-
-    if (kind === PART_KINDS.GARLAND && lum > 1.15) {
-      const crestBoost = clamp((lum - 1.15) * 1.4, 0, 0.78);
-      rLin = rLin * (1 - crestBoost) + 1.0 * crestBoost;
-      gLin = gLin * (1 - crestBoost) + 0.98 * crestBoost;
-      bLin = bLin * (1 - crestBoost) + 0.92 * crestBoost;
+    if (kind === PART_KINDS.GARLAND && lum > 0.85) {
+      const crestBoost = clamp((lum - 0.85) * 0.9, 0, 0.35);
+      rLin = Math.min(1, rLin + 0.25 * crestBoost);
+      gLin = Math.min(1, gLin + 0.22 * crestBoost);
+      bLin = Math.min(1, bLin + 0.12 * crestBoost);
     }
 
     const { str, rr, gg, bb } = getQuantizedRgb(rLin, gLin, bLin);
@@ -376,15 +371,12 @@ export function projectSceneToGrid(
     if (
       kind === PART_KINDS.LIGHT ||
       kind === PART_KINDS.STAR ||
-      (kind === PART_KINDS.GARLAND && lum > 1.15) ||
-      (kind === PART_KINDS.CABIN && shine[i] > 0.6) ||
-      hoverBoost > 0.3
+      hoverBoost > 0.35
     ) {
-      let intensity = 0.78;
-      if (kind === PART_KINDS.STAR) intensity = 1.0;
-      else if (kind === PART_KINDS.LIGHT) intensity = clamp(lum - 0.12, 0, 1);
-      else if (kind === PART_KINDS.GARLAND) intensity = clamp((lum - 1.05) * 1.35, 0.55, 0.96);
-      else if (hoverBoost > 0.3) intensity = clamp(0.45 + hoverBoost * 0.55, 0.45, 0.95);
+      let intensity = 0;
+      if (kind === PART_KINDS.STAR) intensity = i % 6 === 0 ? 0.62 : 0.34;
+      else if (kind === PART_KINDS.LIGHT) intensity = clamp(lum - 0.22, 0, 0.88);
+      else intensity = clamp(0.46 + hoverBoost * 0.28, 0.46, 0.72);
       if (intensity > glow[cellIdx]) {
         glow[cellIdx] = intensity;
         glowColors[cellIdx] = str;
@@ -449,7 +441,7 @@ function applyAsciiLightBounce(grid) {
     for (let c = 2; c < cols - 2; c++) {
       const idx = rowOff + c;
       const g = glow[idx];
-      if (g < 0.45) continue;
+      if (g < 0.48) continue;
 
       const lightCol = glowColors[idx];
       const lp = rgbPacked[idx];
@@ -462,7 +454,7 @@ function applyAsciiLightBounce(grid) {
           if (dr === 0 && dc === 0) continue;
           const nIdx = (r + dr) * cols + (c + dc);
           if (chars[nIdx] === ' ' && depth[nIdx] >= 900) {
-            if (Math.abs(dr) + Math.abs(dc) === 1 && g > 0.58) {
+            if (Math.abs(dr) + Math.abs(dc) === 1 && g > 0.62) {
               chars[nIdx] = '·';
               colors[nIdx] = lightCol;
             }
@@ -473,7 +465,7 @@ function applyAsciiLightBounce(grid) {
           const nr = (p >> 16) & 0xff;
           const ng = (p >> 8) & 0xff;
           const nb = p & 0xff;
-          const boost = 0.28 * g;
+          const boost = 0.22 * g;
           const { str } = getQuantizedRgb(
             (nr + lr * boost) / 255,
             (ng + lg * boost) / 255,
@@ -548,31 +540,31 @@ export class AsciiCanvasRenderer {
     const ctx = this.ctx;
 
     const themeMode = options.colorTheme || 'classic';
-    const bgStops =
-      themeMode === 'cyberpunk'
-        ? ['#150826', '#070412', '#020107']
-        : themeMode === 'frozen'
-          ? ['#081d31', '#030d19', '#02050c']
-          : ['#07131d', '#030710', '#020308'];
-
-    // Subtle ambient radial backdrop behind the tree instead of flat pure black
-    const bgGrad = ctx.createRadialGradient(
-      widthPx * 0.5,
-      heightPx * 0.54,
-      10,
-      widthPx * 0.5,
-      heightPx * 0.54,
-      Math.max(widthPx, heightPx) * 0.65
-    );
-    bgGrad.addColorStop(0, bgStops[0]);
-    bgGrad.addColorStop(0.55, bgStops[1]);
-    bgGrad.addColorStop(1, bgStops[2]);
-    ctx.fillStyle = bgGrad;
+    if (themeMode === 'cyberpunk' || themeMode === 'frozen') {
+      const bgStops =
+        themeMode === 'cyberpunk'
+          ? ['#0d051a', '#05020d', '#020107']
+          : ['#061423', '#030a14', '#020308'];
+      const bgGrad = ctx.createRadialGradient(
+        widthPx * 0.5,
+        heightPx * 0.54,
+        10,
+        widthPx * 0.5,
+        heightPx * 0.54,
+        Math.max(widthPx, heightPx) * 0.65
+      );
+      bgGrad.addColorStop(0, bgStops[0]);
+      bgGrad.addColorStop(0.55, bgStops[1]);
+      bgGrad.addColorStop(1, bgStops[2]);
+      ctx.fillStyle = bgGrad;
+    } else {
+      ctx.fillStyle = CONFIG.render.skyColor;
+    }
     ctx.fillRect(0, 0, widthPx, heightPx);
 
     const { cols, rows, chars, colors, glow, glowColors } = this.grid;
 
-    // Smooth radial light bloom (multi-stop transparent falloff)
+    // Subtle pinpoint radial light falloff (fades smoothly to 0% alpha — never blows out white)
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     for (let r = 0; r < rows; r++) {
@@ -581,14 +573,13 @@ export class AsciiCanvasRenderer {
       for (let c = 0; c < cols; c++) {
         const idx = rowOffset + c;
         const g = glow[idx];
-        if (g <= 0.42) continue;
+        if (g <= 0.45) continue;
         const cx = c * cellW + cellW * 0.5;
-        const radius = cellH * (1.8 + g * 2.1);
+        const radius = cellH * (1.05 + g * 1.15);
         const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
         grad.addColorStop(0, glowColors[idx]);
-        grad.addColorStop(0.35, glowColors[idx]);
         grad.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.globalAlpha = 0.14 + g * 0.18;
+        ctx.globalAlpha = 0.055 + g * 0.075;
         ctx.fillStyle = grad;
         ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
       }
