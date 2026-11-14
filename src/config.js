@@ -26,7 +26,7 @@ export const CONFIG = Object.freeze({
   render: {
     ramp: ' .:-=+*#%@',
     skyColor: '#020308',
-    cameraPitchRad: 0.24,
+    cameraPitchRad: 0.22,
     cameraDist: 3.6,
     cameraTargetY: 1.24,
     focalScale: 2.8,
