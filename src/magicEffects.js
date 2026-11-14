@@ -94,7 +94,7 @@ export function renderMagicSpiral(
       : `rgb(${Math.round(145 * intensity)},${Math.round(232 * intensity)},${Math.round(255 * intensity)})`;
     colors[idx] = colStr;
     if (intensity > 0.65) {
-      glow[idx] = Math.max(glow[idx], intensity * 0.72);
+      glow[idx] = Math.max(glow[idx], intensity * 0.48);
       glowColors[idx] = colStr;
     }
   }
