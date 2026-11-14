@@ -19,7 +19,7 @@ export function buildFoliage(buffer, rng, { y0 = 0.42, y1 = 2.55, tiers = 24 } =
     for (let b = 0; b < nb; b++) {
       const a = (TAU * b) / nb + i * 0.618 * TAU + rng.normal(0, 0.18);
       const L = R * rng.uniform(0.82, 1.06);
-      const n = Math.floor(38 + 145 * L);
+      const n = Math.floor(65 + 220 * L);
 
       const dx = Math.cos(a);
       const dz = Math.sin(a);

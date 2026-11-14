@@ -27,9 +27,9 @@ export const CONFIG = Object.freeze({
     ramp: ' .:-=+*#%@',
     skyColor: '#020308',
     cameraPitchRad: 0.24,
-    cameraDist: 4.5,
-    cameraTargetY: 1.18,
-    focalScale: 2.15,
+    cameraDist: 3.6,
+    cameraTargetY: 1.24,
+    focalScale: 2.8,
   },
   audio: {
     // Set to './assets/music.mp3' after placing your MP3 in /assets,

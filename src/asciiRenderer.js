@@ -75,9 +75,9 @@ export function projectSceneToGrid(
   const cp = Math.cos(cameraPitchRad);
   const sp = Math.sin(cameraPitchRad);
 
-  const scalePx = Math.min(heightPx, widthPx * 1.18) * 0.43;
+  const scalePx = Math.min(heightPx, widthPx * 1.15) * 0.37;
   const centerX = widthPx * 0.5;
-  const centerY = heightPx * 0.56;
+  const centerY = heightPx * 0.53;
 
   const { count, positions, normals, colors: pColors, kinds, t0, phase, shine } = scene;
 
@@ -238,11 +238,11 @@ export class AsciiCanvasRenderer {
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     // Choose monospace font size scaled smoothly to viewport height
-    const fontSize = clamp(Math.round(Math.min(heightPx / 42, widthPx / 54)), 9, 14);
+    const fontSize = clamp(Math.round(Math.min(heightPx / 50, widthPx / 56)), 8, 13);
     this.ctx.font = `600 ${fontSize}px "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace`;
     const measuredW = this.ctx.measureText('M').width || fontSize * 0.6;
-    const cellW = Math.max(5.2, measuredW * 1.02);
-    const cellH = Math.max(9.5, Math.round(fontSize * 1.12));
+    const cellW = Math.max(4.8, measuredW * 1.0);
+    const cellH = Math.max(8.5, Math.round(fontSize * 1.1));
 
     const cols = Math.max(32, Math.floor(widthPx / cellW));
     const rows = Math.max(20, Math.floor(heightPx / cellH));

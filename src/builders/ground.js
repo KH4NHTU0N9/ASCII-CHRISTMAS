@@ -6,13 +6,13 @@ import { PART_KINDS } from '../partsBuffer.js';
  * and radial falloff so the outer edge dissolves into the night sky.
  */
 export function buildGround(buffer, rng) {
-  const rings = 56;
-  const maxRadius = 2.35;
+  const rings = 72;
+  const maxRadius = 2.4;
 
   for (let ir = 1; ir <= rings; ir++) {
     const f = ir / rings;
     const rBase = 0.08 + (maxRadius - 0.08) * Math.pow(f, 0.92);
-    const steps = Math.max(18, Math.floor(20 + 170 * f));
+    const steps = Math.max(24, Math.floor(26 + 220 * f));
     const fade = Math.pow(1 - f, 0.55);
 
     for (let ia = 0; ia < steps; ia++) {
