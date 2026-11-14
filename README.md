@@ -92,17 +92,17 @@ Then open `http://127.0.0.1:4173/` in your browser.
 ### Embed on Your GitHub Profile (`KH4NHTU0NG/KH4NHTU0NG`)
 
 1. Ensure **GitHub Pages** is active in repository **Settings -> Pages** (`Deploy from a branch` -> `main` -> `/ (root)`).
-2. Add this snippet to your Profile `README.md` (uses the ultra-crisp 92-row vector SVG with pure CSS `@keyframes` animations, zero blur on Retina displays):
+2. Add this snippet to your Profile `README.md` (uses the ultra-crisp 70-row, 45-angle slow-rotating 3D vector SVG flipbook with pure CSS `@keyframes`, zero blur on Retina displays):
 
 ```markdown
 <p align="center">
   <a href="https://kh4nhtu0ng.github.io/ASCII-CHRISTMAS/" title="Click to open interactive 3D ASCII Christmas Tree">
-    <img src="https://raw.githubusercontent.com/KH4NHTU0NG/ASCII-CHRISTMAS/main/assets/profile-tree.svg?v=1" alt="3D ASCII Christmas Tree" width="800" />
+    <img src="https://raw.githubusercontent.com/KH4NHTU0NG/ASCII-CHRISTMAS/main/assets/profile-tree.svg?v=2" alt="3D ASCII Christmas Tree" width="800" />
   </a>
 </p>
 ```
 
-Regenerate the animated vector SVG (and verify CSS animations in Chrome) or the optional 360° raster WebP preview anytime:
+Regenerate the slow-rotating 3D SVG flipbook (or pass `--static` for a single 92-row frame) and verify CSS animations in Chrome:
 
 ```bash
 node scripts/export-svg.mjs --verify
