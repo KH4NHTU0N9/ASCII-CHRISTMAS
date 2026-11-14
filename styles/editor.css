@@ -1,0 +1,120 @@
+.editor-pane {
+  flex: 1 1 44%;
+  min-height: 140px;
+  background: var(--bg-editor);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.code-scroller {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding: 10px 14px 28px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.52;
+  color: #abb2bf;
+  scrollbar-width: thin;
+  scrollbar-color: #242b3b transparent;
+}
+
+.code-scroller::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.code-scroller::-webkit-scrollbar-thumb {
+  background: #242b3b;
+  border-radius: 3px;
+}
+
+.code-line {
+  display: flex;
+  align-items: baseline;
+  white-space: pre;
+  min-height: 18px;
+}
+
+.code-line-active {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.line-no {
+  flex: 0 0 auto;
+  min-width: 30px;
+  margin-right: 16px;
+  text-align: right;
+  color: var(--text-dim);
+  user-select: none;
+}
+
+.line-code {
+  flex: 1 1 auto;
+}
+
+.tok-keyword {
+  color: #c678dd;
+}
+
+.tok-builtin {
+  color: #e5c07b;
+}
+
+.tok-fn {
+  color: #61afef;
+}
+
+.tok-const {
+  color: #e5c07b;
+}
+
+.tok-string {
+  color: #98c379;
+}
+
+.tok-number {
+  color: #d19a66;
+}
+
+.tok-comment {
+  color: #5c6370;
+  font-style: italic;
+}
+
+.tok-ident {
+  color: #abb2bf;
+}
+
+.code-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 13px;
+  margin-left: 1px;
+  vertical-align: -2px;
+  background: #e05561;
+  box-shadow: 0 0 6px rgba(224, 85, 97, 0.65);
+  animation: cursor-blink 0.9s steps(2, start) infinite;
+}
+
+@keyframes cursor-blink {
+  0%, 49% {
+    opacity: 1;
+  }
+  50%, 100% {
+    opacity: 0.25;
+  }
+}
+
+@media (max-width: 600px) {
+  .code-scroller {
+    padding: 8px 10px 20px;
+    font-size: 11px;
+  }
+
+  .line-no {
+    min-width: 24px;
+    margin-right: 10px;
+  }
+}
