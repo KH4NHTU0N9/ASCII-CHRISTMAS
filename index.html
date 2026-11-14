@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ASCII-CHRISTMAS · 3D Terminal Tree</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="./styles/main.css" />
+  <link rel="stylesheet" href="./styles/editor.css" />
+</head>
+<body>
+  <main id="app-shell" class="app-shell">
+    <section class="viewport-pane" aria-label="3D ASCII Christmas Tree">
+      <canvas id="ascii-canvas"></canvas>
+
+      <div class="canvas-overlay-top">
+        <button id="greeting-badge" class="greeting-badge" type="button" title="Toggle Christmas Audio (M)">
+          <span class="music-dot" aria-hidden="true"></span>
+          <span id="greeting-text">Merry Christmas</span>
+        </button>
+        <div id="hud-time" class="hud-time" aria-live="off">t 00.00s</div>
+      </div>
+
+      <div id="drop-overlay" class="drop-overlay" hidden>
+        Drop audio file (.mp3 / .wav / .ogg) to play
+      </div>
+    </section>
+
+    <section class="hud-bar" aria-label="Render Telemetry and Controls">
+      <div class="hud-telemetry">
+        <div id="hud-handle" class="hud-handle">@KH4NHTU0NG · 2026</div>
+        <div class="hud-metrics">
+          <span>rotation <strong id="hud-rotation">000.00°</strong></span>
+          <span>lights <strong id="hud-lights">0</strong></span>
+        </div>
+        <div class="hud-metrics">
+          <span>letters <strong id="hud-letters">0</strong></span>
+        </div>
+      </div>
+
+      <div class="hud-divider"></div>
+
+      <div class="hud-status-row">
+        <div class="hud-file">
+          <span id="hud-lang" class="file-lang">js</span>
+          <span id="hud-filename" class="file-name">treeEngine.js</span>
+        </div>
+
+        <div class="hud-actions">
+          <button id="btn-music" class="hud-btn" type="button" title="Play / Pause Music (M)">
+            ♪ <span id="music-label">Music</span>
+          </button>
+          <button id="btn-mp3" class="hud-btn" type="button" title="Choose local MP3 / Audio file">
+            MP3
+          </button>
+          <input id="mp3-input" type="file" accept="audio/*" hidden />
+          <button id="btn-replay" class="hud-btn" type="button" title="Replay build animation (R)">
+            ↻ Replay
+          </button>
+          <button id="btn-toggle-code" class="hud-btn is-active" type="button" title="Show / Hide Code Pane (C)">
+            &lt;/&gt; Code
+          </button>
+          <span class="fps-status">
+            <span class="fps-dot" aria-hidden="true"></span>
+            <span id="hud-fps">running · 30 fps</span>
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <section id="editor-pane" class="editor-pane" aria-label="Live Source Code">
+      <div id="code-scroller" class="code-scroller" tabindex="0"></div>
+    </section>
+  </main>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
