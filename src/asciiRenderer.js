@@ -3,10 +3,83 @@ import { clamp } from './math.js';
 import { PART_KINDS } from './partsBuffer.js';
 import { computePointShade } from './treeEngine.js';
 import { renderSkyToGrid } from './skyParticles.js';
-import { renderMagicSpiral, renderShootingStars } from './magicEffects.js';
+import { renderChimneySmoke, renderMagicSpiral, renderShootingStars } from './magicEffects.js';
 
 const RAMP = CONFIG.render.ramp;
+const BINARY_RAMP = ' 00010111';
+const MATH_RAMP = ' ·+-±×÷π∑∫∞';
 const RGB_CACHE = new Map();
+
+function applyColorTheme(baseR, baseG, baseB, kind, shineVal, colorTheme) {
+  if (!colorTheme || colorTheme === 'classic') {
+    return [baseR, baseG, baseB];
+  }
+
+  if (colorTheme === 'cyberpunk') {
+    if (kind === PART_KINDS.NEEDLE) {
+      return [0.08 + 0.14 * baseG, 0.52 + 0.42 * baseG, 0.78 + 0.2 * baseB];
+    }
+    if (kind === PART_KINDS.TRUNK) {
+      return [0.42, 0.18, 0.58];
+    }
+    if (kind === PART_KINDS.GROUND) {
+      return [0.34, 0.18, 0.68];
+    }
+    if (kind === PART_KINDS.GARLAND) {
+      return [1.0, 0.28, 0.88];
+    }
+    if (kind === PART_KINDS.STAR) {
+      return [0.38, 0.98, 1.0];
+    }
+    if (kind === PART_KINDS.CABIN) {
+      if (shineVal > 0.6) return [1.0, 0.9, 0.28];
+      if (baseB > 0.9) return [0.76, 0.72, 1.0];
+      return [0.46, 0.2, 0.62];
+    }
+    if (kind === PART_KINDS.SNOWMAN) {
+      return baseR > 0.85 && baseG < 0.35 ? [1.0, 0.2, 0.82] : [0.76, 0.84, 1.0];
+    }
+    if (kind === PART_KINDS.LIGHT || kind === PART_KINDS.BALL || kind === PART_KINDS.GIFT || kind === PART_KINDS.RIBBON) {
+      if (baseR > baseG && baseR > baseB) return [1.0, 0.2, 0.76];
+      if (baseG > baseR && baseG >= baseB) return [0.24, 1.0, 0.68];
+      return [0.18, 0.94, 1.0];
+    }
+    return [baseR, baseG, baseB];
+  }
+
+  if (colorTheme === 'frozen') {
+    if (kind === PART_KINDS.NEEDLE) {
+      return [0.2 + 0.24 * baseG, 0.66 + 0.24 * baseG, 0.96];
+    }
+    if (kind === PART_KINDS.TRUNK) {
+      return [0.32, 0.44, 0.62];
+    }
+    if (kind === PART_KINDS.GROUND) {
+      return [0.56, 0.82, 1.0];
+    }
+    if (kind === PART_KINDS.GARLAND) {
+      return [0.76, 0.94, 1.0];
+    }
+    if (kind === PART_KINDS.STAR) {
+      return [0.84, 0.97, 1.0];
+    }
+    if (kind === PART_KINDS.CABIN) {
+      if (shineVal > 0.6) return [1.0, 0.88, 0.65];
+      if (baseB > 0.9) return [0.88, 0.97, 1.0];
+      return [0.36, 0.48, 0.68];
+    }
+    if (kind === PART_KINDS.SNOWMAN) {
+      return baseR > 0.85 && baseG < 0.35 ? [0.42, 0.78, 1.0] : [0.9, 0.97, 1.0];
+    }
+    if (kind === PART_KINDS.LIGHT || kind === PART_KINDS.BALL || kind === PART_KINDS.GIFT || kind === PART_KINDS.RIBBON) {
+      if (baseR > baseG && baseR > baseB) return [0.58, 0.76, 1.0];
+      if (baseG > baseR) return [0.38, 0.94, 1.0];
+      return [0.86, 0.96, 1.0];
+    }
+  }
+
+  return [baseR, baseG, baseB];
+}
 
 function getQuantizedRgb(rLin, gLin, bLin) {
   const rr = clamp(Math.round(clamp(rLin, 0, 1) * 255), 0, 255) & 0xfc;
@@ -40,7 +113,7 @@ export function createAsciiGrid(cols, rows) {
   return {
     cols,
     rows,
-    depth: new Float32Array(len),
+    depth: new Float32Array(len).fill(1000),
     kinds: new Int16Array(len).fill(-1),
     chars: new Array(len).fill(' '),
     colors: new Array(len).fill(''),
@@ -60,10 +133,37 @@ function resetGrid(grid) {
   grid.glowColors.fill('');
 }
 
-function glyphFromLuminance(lum, kind) {
+function glyphFromLuminance(lum, kind, glyphSet = 'ascii') {
+  if (glyphSet === 'binary') {
+    if (kind === PART_KINDS.LIGHT || kind === PART_KINDS.STAR) {
+      return lum > 0.82 ? '1' : '0';
+    }
+    if (kind === PART_KINDS.GARLAND) {
+      return lum > 0.9 ? '1' : '0';
+    }
+    if (kind === PART_KINDS.GROUND) {
+      return lum > 0.6 ? '1' : '0';
+    }
+    const idx = clamp(Math.floor(lum * (BINARY_RAMP.length - 1)), 1, BINARY_RAMP.length - 1);
+    return BINARY_RAMP[idx];
+  }
+
+  if (glyphSet === 'math') {
+    if (kind === PART_KINDS.LIGHT) return lum > 0.9 ? '∞' : '×';
+    if (kind === PART_KINDS.STAR) return lum > 0.95 ? '∑' : '∞';
+    if (kind === PART_KINDS.GARLAND) return lum > 1.15 ? '∞' : lum > 0.8 ? '∑' : '±';
+    if (kind === PART_KINDS.GROUND) {
+      const groundMath = ' ·+-±×';
+      const idx = clamp(Math.floor(lum * (groundMath.length - 1)), 1, groundMath.length - 1);
+      return groundMath[idx];
+    }
+    const idx = clamp(Math.floor(lum * 1.02 * (MATH_RAMP.length - 1)), 1, MATH_RAMP.length - 1);
+    return MATH_RAMP[idx];
+  }
+
   if (kind === PART_KINDS.LIGHT) return lum > 0.9 ? '@' : '*';
   if (kind === PART_KINDS.STAR) return lum > 0.95 ? '@' : '#';
-  if (kind === PART_KINDS.GARLAND) return lum > 0.78 ? '*' : '+';
+  if (kind === PART_KINDS.GARLAND) return lum > 1.24 ? '@' : lum > 0.84 ? '*' : '+';
   if (kind === PART_KINDS.GROUND) {
     const groundRamp = ' .·:;-=+';
     const idx = clamp(Math.floor(lum * (groundRamp.length - 1)), 1, groundRamp.length - 1);
@@ -93,6 +193,9 @@ export function projectSceneToGrid(
     lightMode = 'twinkle',
     pitchOffset = 0,
     zoom = 1,
+    colorTheme = 'classic',
+    glyphSet = 'ascii',
+    cursor = null,
   } = {}
 ) {
   resetGrid(grid);
@@ -126,6 +229,12 @@ export function projectSceneToGrid(
   const centerX = widthPx * 0.5;
   const centerY = heightPx * 0.49;
 
+  const hasCursor = Boolean(cursor && cursor.active);
+  const cursorX = hasCursor ? cursor.u * widthPx : 0;
+  const cursorY = hasCursor ? cursor.v * heightPx : 0;
+  const hoverRadius = Math.min(widthPx, heightPx) * 0.14;
+  const hoverRadiusSq = hoverRadius * hoverRadius;
+
   const { count, positions, normals, colors: pColors, kinds, t0, phase, shine } = scene;
 
   for (let i = 0; i < count; i++) {
@@ -146,14 +255,35 @@ export function projectSceneToGrid(
     if (zCam <= 0.35) continue;
 
     const proj = focalScale / zCam;
-    const sx = centerX + rx * proj * scalePx;
-    const syScreen = centerY - py * proj * scalePx;
+    let sx = centerX + rx * proj * scalePx;
+    let syScreen = centerY - py * proj * scalePx;
+
+    const kind = kinds[i];
+    let hoverBoost = 0;
+    if (hasCursor) {
+      const dx = sx - cursorX;
+      const dy = syScreen - cursorY;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < hoverRadiusSq) {
+        const dist = Math.sqrt(d2);
+        const falloff = 1 - dist / hoverRadius;
+        hoverBoost = falloff * falloff;
+        const repelPx =
+          hoverBoost * (kind === PART_KINDS.GROUND ? 5.5 : 13.5);
+        if (dist > 0.5) {
+          sx += (dx / dist) * repelPx;
+          syScreen += (dy / dist) * repelPx;
+        } else {
+          sx += (i % 2 === 0 ? 1 : -1) * repelPx;
+          syScreen -= repelPx * 0.7;
+        }
+      }
+    }
 
     const col = Math.floor(sx / cellW);
     const row = Math.floor(syScreen / cellH);
     if (col < 0 || col >= cols || row < 0 || row >= rows) continue;
 
-    const kind = kinds[i];
     let zBias = 0;
     if (kind === PART_KINDS.LIGHT) {
       zBias = 0.09;
@@ -163,8 +293,13 @@ export function projectSceneToGrid(
       kind === PART_KINDS.STAR
     ) {
       zBias = 0.04;
-    } else if (kind === PART_KINDS.GIFT || kind === PART_KINDS.RIBBON) {
-      zBias = 0.02;
+    } else if (
+      kind === PART_KINDS.GIFT ||
+      kind === PART_KINDS.RIBBON ||
+      kind === PART_KINDS.CABIN ||
+      kind === PART_KINDS.SNOWMAN
+    ) {
+      zBias = 0.025;
     }
     const zEffective = zCam - zBias;
 
@@ -179,7 +314,7 @@ export function projectSceneToGrid(
     const nry = nwy * cp + nrz * sp;
     const nrzPitch = -nwy * sp + nrz * cp;
 
-    const { lum, birth } = computePointShade(
+    const shade = computePointShade(
       nrx,
       nry,
       nrzPitch,
@@ -190,6 +325,8 @@ export function projectSceneToGrid(
       phase[i],
       lightMode
     );
+    const lum = hoverBoost > 0 ? clamp(shade.lum + hoverBoost * 0.85, 0.28, 1.75) : shade.lum;
+    const birth = shade.birth;
 
     depth[cellIdx] = zEffective;
     cellKinds[cellIdx] = kind;
@@ -197,6 +334,9 @@ export function projectSceneToGrid(
     let baseR = pColors[i3];
     let baseG = pColors[i3 + 1];
     let baseB = pColors[i3 + 2];
+    if (colorTheme && colorTheme !== 'classic') {
+      [baseR, baseG, baseB] = applyColorTheme(baseR, baseG, baseB, kind, shine[i], colorTheme);
+    }
     if (kind === PART_KINDS.LIGHT) {
       [baseR, baseG, baseB] = resolveLightTint(baseR, baseG, baseB, lightMode, elapsedSec, pointT0);
     }
@@ -207,21 +347,44 @@ export function projectSceneToGrid(
         : 0.48 + 0.88 * lum;
 
     // Subtle perceptual gamma lift so thin micro-ASCII glyphs glow brightly on dark canvas
-    const rRaw = Math.pow(clamp(baseR * shadeFactor, 0, 1.3), 0.82);
-    const gRaw = Math.pow(clamp(baseG * shadeFactor, 0, 1.3), 0.82);
-    const bRaw = Math.pow(clamp(baseB * shadeFactor, 0, 1.3), 0.82);
+    const rRaw = Math.pow(clamp(baseR * shadeFactor, 0, 1.35), 0.82);
+    const gRaw = Math.pow(clamp(baseG * shadeFactor, 0, 1.35), 0.82);
+    const bRaw = Math.pow(clamp(baseB * shadeFactor, 0, 1.35), 0.82);
 
-    const rLin = rRaw * (1 - birth * 0.72) + 0.98 * (birth * 0.72);
-    const gLin = gRaw * (1 - birth * 0.72) + 0.99 * (birth * 0.72);
-    const bLin = bRaw * (1 - birth * 0.72) + 1.0 * (birth * 0.72);
+    const flashMix = clamp(birth * 0.72 + hoverBoost * 0.36, 0, 0.88);
+    let rLin = rRaw * (1 - flashMix) + 0.98 * flashMix;
+    let gLin = gRaw * (1 - flashMix) + 0.99 * flashMix;
+    let bLin = bRaw * (1 - flashMix) + 1.0 * flashMix;
+
+    if (kind === PART_KINDS.GARLAND && lum > 1.15) {
+      const crestBoost = clamp((lum - 1.15) * 1.4, 0, 0.78);
+      rLin = rLin * (1 - crestBoost) + 1.0 * crestBoost;
+      gLin = gLin * (1 - crestBoost) + 0.98 * crestBoost;
+      bLin = bLin * (1 - crestBoost) + 0.92 * crestBoost;
+    }
 
     const { str, rr, gg, bb } = getQuantizedRgb(rLin, gLin, bLin);
-    chars[cellIdx] = birth > 0.35 ? '#' : glyphFromLuminance(lum, kind);
+    chars[cellIdx] =
+      birth > 0.35
+        ? glyphSet === 'binary'
+          ? '1'
+          : '#'
+        : glyphFromLuminance(lum, kind, glyphSet);
     colors[cellIdx] = str;
     rgbPacked[cellIdx] = (rr << 16) | (gg << 8) | bb;
 
-    if (kind === PART_KINDS.LIGHT || kind === PART_KINDS.STAR) {
-      const intensity = kind === PART_KINDS.STAR ? 1.0 : clamp(lum - 0.12, 0, 1);
+    if (
+      kind === PART_KINDS.LIGHT ||
+      kind === PART_KINDS.STAR ||
+      (kind === PART_KINDS.GARLAND && lum > 1.15) ||
+      (kind === PART_KINDS.CABIN && shine[i] > 0.6) ||
+      hoverBoost > 0.3
+    ) {
+      let intensity = 0.78;
+      if (kind === PART_KINDS.STAR) intensity = 1.0;
+      else if (kind === PART_KINDS.LIGHT) intensity = clamp(lum - 0.12, 0, 1);
+      else if (kind === PART_KINDS.GARLAND) intensity = clamp((lum - 1.05) * 1.35, 0.55, 0.96);
+      else if (hoverBoost > 0.3) intensity = clamp(0.45 + hoverBoost * 0.55, 0.45, 0.95);
       if (intensity > glow[cellIdx]) {
         glow[cellIdx] = intensity;
         glowColors[cellIdx] = str;
@@ -232,6 +395,20 @@ export function projectSceneToGrid(
   // Ascending 3D golden/cyan magic spiral particles
   if (magicSpiral) {
     renderMagicSpiral(magicSpiral, grid, {
+      elapsedSec,
+      rotationDeg,
+      widthPx,
+      heightPx,
+      cellW,
+      cellH,
+      pitchOffset,
+      zoom,
+    });
+  }
+
+  // Gentle curling ASCII smoke rising from the cabin chimney
+  if (scene.chimneyPos) {
+    renderChimneySmoke(scene.chimneyPos, grid, {
       elapsedSec,
       rotationDeg,
       widthPx,
@@ -370,7 +547,15 @@ export class AsciiCanvasRenderer {
 
     const ctx = this.ctx;
 
-    // Subtle deep midnight-blue ambient glow behind the tree instead of flat pure black
+    const themeMode = options.colorTheme || 'classic';
+    const bgStops =
+      themeMode === 'cyberpunk'
+        ? ['#150826', '#070412', '#020107']
+        : themeMode === 'frozen'
+          ? ['#081d31', '#030d19', '#02050c']
+          : ['#07131d', '#030710', '#020308'];
+
+    // Subtle ambient radial backdrop behind the tree instead of flat pure black
     const bgGrad = ctx.createRadialGradient(
       widthPx * 0.5,
       heightPx * 0.54,
@@ -379,9 +564,9 @@ export class AsciiCanvasRenderer {
       heightPx * 0.54,
       Math.max(widthPx, heightPx) * 0.65
     );
-    bgGrad.addColorStop(0, '#07131d');
-    bgGrad.addColorStop(0.55, '#030710');
-    bgGrad.addColorStop(1, '#020308');
+    bgGrad.addColorStop(0, bgStops[0]);
+    bgGrad.addColorStop(0.55, bgStops[1]);
+    bgGrad.addColorStop(1, bgStops[2]);
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, widthPx, heightPx);
 
