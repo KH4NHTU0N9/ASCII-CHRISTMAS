@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildTreeScene } from '../src/treeEngine.js';
+import { buildTreeScene, PART_KINDS } from '../src/treeEngine.js';
 import { createSkyParticles } from '../src/skyParticles.js';
 import { createAsciiGrid, projectSceneToGrid } from '../src/asciiRenderer.js';
 import { highlightLineToHtml, tokenizeLine } from '../src/syntaxHighlighter.js';
@@ -8,25 +8,25 @@ import { highlightLineToHtml, tokenizeLine } from '../src/syntaxHighlighter.js';
 test('projectSceneToGrid reveals more glyphs as build progresses over time', () => {
   const scene = buildTreeScene();
   const sky = createSkyParticles(2026);
-  const grid = createAsciiGrid(120, 48);
+  const grid = createAsciiGrid(150, 70);
 
   const countEarly = projectSceneToGrid(scene, grid, {
     elapsedSec: 0.4,
     rotationDeg: 7.2,
-    widthPx: 840,
+    widthPx: 800,
     heightPx: 560,
-    cellW: 7,
-    cellH: 11.5,
+    cellW: 5.3,
+    cellH: 8.0,
     sky,
   });
 
   const countFull = projectSceneToGrid(scene, grid, {
     elapsedSec: 12.0,
     rotationDeg: 216,
-    widthPx: 840,
+    widthPx: 800,
     heightPx: 560,
-    cellW: 7,
-    cellH: 11.5,
+    cellW: 5.3,
+    cellH: 8.0,
     sky,
   });
 
@@ -35,6 +35,20 @@ test('projectSceneToGrid reveals more glyphs as build progresses over time', () 
     countFull > countEarly + 500,
     `Expected full tree (${countFull}) to exceed early state (${countEarly})`
   );
+
+  // Verify every decoration type visibly wins Z-buffer cells on the front tree
+  const byKind = new Map();
+  for (let i = 0; i < grid.kinds.length; i++) {
+    const k = grid.kinds[i];
+    if (k >= 0) byKind.set(k, (byKind.get(k) || 0) + 1);
+  }
+  assert.ok((byKind.get(PART_KINDS.NEEDLE) || 0) >= 400, 'Expected dense pine needles');
+  assert.ok((byKind.get(PART_KINDS.BALL) || 0) >= 80, 'Expected visible ornament baubles');
+  assert.ok((byKind.get(PART_KINDS.GARLAND) || 0) >= 100, 'Expected visible tinsel garland');
+  assert.ok((byKind.get(PART_KINDS.LIGHT) || 0) >= 40, 'Expected visible fairy lights');
+  assert.ok((byKind.get(PART_KINDS.STAR) || 0) >= 20, 'Expected visible apex star');
+  assert.ok((byKind.get(PART_KINDS.GIFT) || 0) >= 100, 'Expected visible gift boxes');
+  assert.ok((byKind.get(PART_KINDS.RIBBON) || 0) >= 30, 'Expected visible gift ribbons');
 });
 
 test('syntaxHighlighter tokenizes JS safely without XSS injection', () => {

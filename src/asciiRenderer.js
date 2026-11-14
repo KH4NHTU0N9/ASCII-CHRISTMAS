@@ -15,6 +15,7 @@ export function createAsciiGrid(cols, rows) {
     cols,
     rows,
     depth: new Float32Array(len),
+    kinds: new Int16Array(len).fill(-1),
     chars: new Array(len).fill(' '),
     colors: new Array(len).fill(''),
     glow: new Float32Array(len),
@@ -24,6 +25,7 @@ export function createAsciiGrid(cols, rows) {
 
 function resetGrid(grid) {
   grid.depth.fill(1000);
+  grid.kinds.fill(-1);
   grid.chars.fill(' ');
   grid.colors.fill('');
   grid.glow.fill(0);
@@ -62,7 +64,7 @@ export function projectSceneToGrid(
 ) {
   resetGrid(grid);
 
-  const { cols, rows, depth, chars, colors, glow, glowColors } = grid;
+  const { cols, rows, depth, kinds: cellKinds, chars, colors, glow, glowColors } = grid;
   const {
     cameraPitchRad,
     cameraDist,
@@ -110,8 +112,21 @@ export function projectSceneToGrid(
     const row = Math.floor(syScreen / cellH);
     if (col < 0 || col >= cols || row < 0 || row >= rows) continue;
 
+    const kind = kinds[i];
+    let zBias = 0;
+    if (kind === PART_KINDS.LIGHT) {
+      zBias = 0.09;
+    } else if (
+      kind === PART_KINDS.BALL ||
+      kind === PART_KINDS.GARLAND ||
+      kind === PART_KINDS.STAR
+    ) {
+      zBias = 0.04;
+    }
+    const zEffective = zCam - zBias;
+
     const cellIdx = row * cols + col;
-    if (zCam >= depth[cellIdx]) continue;
+    if (zEffective >= depth[cellIdx]) continue;
 
     // Rotate normal for directional lighting
     const nwx = normals[i3];
@@ -122,7 +137,6 @@ export function projectSceneToGrid(
     const nry = nwy * cp - nrz * sp;
     const nrzPitch = nwy * sp + nrz * cp;
 
-    const kind = kinds[i];
     const { lum, birth } = computePointShade(
       nrx,
       nry,
@@ -134,7 +148,8 @@ export function projectSceneToGrid(
       phase[i]
     );
 
-    depth[cellIdx] = zCam;
+    depth[cellIdx] = zEffective;
+    cellKinds[cellIdx] = kind;
 
     // Blend base albedo toward frost-white at growth frontier
     const baseR = pColors[i3];
@@ -185,7 +200,7 @@ export function projectSceneToGrid(
 }
 
 function applyAsciiHalos(grid) {
-  const { cols, rows, depth, chars, colors, glow, glowColors } = grid;
+  const { cols, rows, depth, kinds: cellKinds, chars, colors, glow, glowColors } = grid;
   const offsets = [
     [-1, 0],
     [1, 0],
