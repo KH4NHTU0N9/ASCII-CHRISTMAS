@@ -29,6 +29,40 @@
       <div id="drop-overlay" class="drop-overlay" hidden>
         Drop audio file (.mp3 / .wav / .ogg) to play
       </div>
+
+      <button id="zen-exit-btn" class="zen-exit-btn" type="button" title="Exit Zen Mode (H / Esc)">
+        ✕ Exit Zen (H)
+      </button>
+
+      <aside id="control-panel" class="control-panel" aria-label="Quick Customization Panel" hidden>
+        <div class="ctrl-header">
+          <span class="ctrl-title">⚙ Quick Customize</span>
+          <button id="btn-panel-close" class="ctrl-close" type="button" aria-label="Close panel">×</button>
+        </div>
+
+        <div class="ctrl-group">
+          <div class="ctrl-label">Color Palette</div>
+          <div class="ctrl-chips" role="group" aria-label="Color Palette">
+            <button class="ctrl-chip is-active" type="button" data-theme="classic">Classic</button>
+            <button class="ctrl-chip" type="button" data-theme="cyberpunk">Cyberpunk</button>
+            <button class="ctrl-chip" type="button" data-theme="frozen">Frozen Ice</button>
+          </div>
+        </div>
+
+        <div class="ctrl-group">
+          <div class="ctrl-label">ASCII Glyph Set</div>
+          <div class="ctrl-chips" role="group" aria-label="ASCII Glyph Set">
+            <button class="ctrl-chip is-active" type="button" data-glyph="ascii">ASCII</button>
+            <button class="ctrl-chip" type="button" data-glyph="binary">0 / 1</button>
+            <button class="ctrl-chip" type="button" data-glyph="math">Math ∑∞</button>
+          </div>
+        </div>
+
+        <div class="ctrl-group ctrl-row">
+          <button id="btn-auto-rotate" class="ctrl-chip is-active" type="button">↻ Auto-Rotate</button>
+          <button id="btn-reset-cam" class="ctrl-chip" type="button">⌖ Reset View</button>
+        </div>
+      </aside>
     </section>
 
     <section class="hud-bar" aria-label="Render Telemetry and Controls">
@@ -55,6 +89,9 @@
           <button id="btn-mode" class="hud-btn" type="button" title="Cycle Light Mode (L)">
             ✦ <span id="mode-label">Twinkle</span>
           </button>
+          <button id="btn-panel" class="hud-btn" type="button" title="Quick Customize Colors & Glyphs (P)">
+            ⚙ Tune
+          </button>
           <button id="btn-music" class="hud-btn" type="button" title="Play / Pause Music (M)">
             ♪ <span id="music-label">Music</span>
           </button>
@@ -67,6 +104,9 @@
           </button>
           <button id="btn-toggle-code" class="hud-btn is-active" type="button" title="Show / Hide Code Pane (C)">
             &lt;/&gt; Code
+          </button>
+          <button id="btn-zen" class="hud-btn" type="button" title="Fullscreen Zen Mode — Hide UI (H)">
+            ⛶ Zen
           </button>
           <span class="fps-status">
             <span class="fps-dot" aria-hidden="true"></span>
