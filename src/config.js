@@ -32,7 +32,9 @@ export const CONFIG = Object.freeze({
     focalScale: 2.15,
   },
   audio: {
-    mp3Path: './assets/music.mp3',
+    // Set to './assets/music.mp3' after placing your MP3 in /assets,
+    // or use the in-app MP3 picker / drag-and-drop.
+    mp3Path: '',
     defaultVolume: 0.65,
     tempoBpm: 112,
   },
