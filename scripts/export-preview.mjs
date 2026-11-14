@@ -50,7 +50,7 @@ const EXPORT_HTML = `<!DOCTYPE html>
   />
   <style>
     html, body { margin: 0; padding: 0; background: #020308; overflow: hidden; }
-    canvas { display: block; width: 760px; height: 440px; }
+    canvas { display: block; width: 500px; height: 420px; }
   </style>
 </head>
 <body>
@@ -68,20 +68,26 @@ const EXPORT_HTML = `<!DOCTYPE html>
     const sky = createSkyParticles(2026);
     const magicSpiral = createMagicSpiral(58, 99);
 
-    function drawProfileBadge(ctx, widthPx, rotationText) {
+    function drawProfileBadge(ctx, widthPx, heightPx, rotationText) {
       ctx.save();
-      ctx.font = '500 11px "JetBrains Mono", Menlo, Consolas, monospace';
-      const label = '@KH4NHTU0NG · 2026  ·  ' + rotationText;
-      const textW = ctx.measureText(label).width;
-      const padX = 11;
-      const boxW = textW + padX * 2 + 14;
-      const boxH = 24;
-      const x = 14;
-      const y = 12;
-
-      ctx.fillStyle = 'rgba(8, 12, 20, 0.72)';
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+      // Subtle terminal card frame that blends seamlessly on GitHub Dark & Light themes
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.22)';
       ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(0.5, 0.5, widthPx - 1, heightPx - 1, 10);
+      ctx.stroke();
+
+      ctx.font = '500 10.5px "JetBrains Mono", Menlo, Consolas, monospace';
+      const label = '@KH4NHTU0NG · 2026 · ' + rotationText;
+      const textW = ctx.measureText(label).width;
+      const padX = 10;
+      const boxW = textW + padX * 2 + 12;
+      const boxH = 22;
+      const x = 12;
+      const y = 10;
+
+      ctx.fillStyle = 'rgba(8, 12, 20, 0.78)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
       ctx.beginPath();
       ctx.roundRect(x, y, boxW, boxH, 999);
       ctx.fill();
@@ -89,45 +95,50 @@ const EXPORT_HTML = `<!DOCTYPE html>
 
       ctx.fillStyle = '#f1c453';
       ctx.beginPath();
-      ctx.arc(x + 12, y + boxH / 2, 3, 0, Math.PI * 2);
+      ctx.arc(x + 11, y + boxH / 2, 2.8, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#d8dee9';
+      ctx.fillStyle = '#e2e8f0';
       ctx.textBaseline = 'middle';
-      ctx.fillText(label, x + 21, y + boxH / 2 + 0.5);
+      ctx.fillText(label, x + 19, y + boxH / 2 + 0.5);
 
-      const hint = 'click for interactive 3D ↗';
+      const hint = 'interactive 3D ↗';
       const hintW = ctx.measureText(hint).width;
-      const hintBoxW = hintW + 20;
-      const hx = widthPx - hintBoxW - 14;
-      ctx.fillStyle = 'rgba(8, 12, 20, 0.65)';
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      const hintBoxW = hintW + 18;
+      const hx = widthPx - hintBoxW - 12;
+      ctx.fillStyle = 'rgba(8, 12, 20, 0.75)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
       ctx.beginPath();
       ctx.roundRect(hx, y, hintBoxW, boxH, 999);
       ctx.fill();
       ctx.stroke();
 
-      ctx.fillStyle = 'rgba(203, 213, 225, 0.85)';
-      ctx.fillText(hint, hx + 10, y + boxH / 2 + 0.5);
+      ctx.fillStyle = 'rgba(203, 213, 225, 0.9)';
+      ctx.fillText(hint, hx + 9, y + boxH / 2 + 0.5);
       ctx.restore();
     }
 
     window.__EXPORT_API__ = {
       async ready() {
         await document.fonts.ready;
-        renderer.resize();
+        renderer.resize(62);
         return renderer.metrics;
       },
-      renderFrameWebp(elapsedSec, rotationDeg, quality = 0.78) {
+      renderFrameWebp(elapsedSec, rotationDeg, quality = 0.82) {
         const lettersCount = renderer.render(scene, sky, elapsedSec, rotationDeg, {
           magicSpiral,
           lightMode: 'twinkle',
-          zoom: 0.88,
+          zoom: 0.89,
           colorTheme: 'classic',
           glyphSet: 'ascii',
         });
         const tel = computeTelemetry(scene, elapsedSec, rotationDeg, lettersCount);
-        drawProfileBadge(renderer.ctx, renderer.metrics.widthPx, tel.rotationText);
+        drawProfileBadge(
+          renderer.ctx,
+          renderer.metrics.widthPx,
+          renderer.metrics.heightPx,
+          tel.rotationText
+        );
         return canvas.toDataURL('image/webp', quality);
       },
       renderSamplePng() {
@@ -252,11 +263,11 @@ function createCdpClient(wsUrl) {
 }
 
 async function run() {
-  const width = 760;
-  const height = 440;
-  const totalFrames = 90;
-  const durationMs = 95; // 90 * 95ms = 8.55s full 360deg loop
-  const quality = 0.78;
+  const width = 500;
+  const height = 420;
+  const totalFrames = 112;
+  const durationMs = 42; // ~23.8 FPS smooth 360deg loop in 4.7s
+  const quality = 0.81;
   const outPath = join(ROOT_DIR, 'assets', 'preview.webp');
   const samplePngPath = process.env.SAMPLE_PNG_OUT || '';
 
